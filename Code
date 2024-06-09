@@ -1,0 +1,5560 @@
+#include <iostream>
+#include <cstdlib> 
+#include <ctime>
+#include <fstream>
+#include <random>
+#include <vector>
+#include <algorithm>
+#include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
+#include <SFML/System.hpp>
+#include <SFML/Window.hpp>
+using namespace sf;
+using namespace std;
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////           GLOBAL INITIALIZATIONS FOR VARIABLES, BOOLEANS, VECTORS, AND SOUNDS NEEDED IN MORE THAN ONE FUNCTION         ///////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+
+
+
+
+// Size of Array of npc fish and sound effects //
+
+int scorelevel1 = 0;
+int scorelevel2 = 0;
+const int npc1 = 100;
+const int npc2 = 60;
+const int npc3 = 40;
+const int npc4 = 20;
+const int numberofsound = 15;
+
+// The variable responsible for changing the mainfish speed //
+
+float dampeningFactor = 0.1f;
+
+// Array of booleans for the checkboxs in settings menu //
+
+bool checkbox[5] = { false };
+
+// The boolean which is responsible for knowing which level we are in //
+
+bool In_game_level = true;
+
+// Struct for all the npc fish //
+
+struct npcfish
+{
+	Sprite image;
+	int speed;
+	bool alive, minieaten = false;
+	bool npchit = false;
+	RectangleShape mouth2;
+}	smallfish[npc1], mediumfish[npc2], largefish[npc3], bubbles[200], sharktank[npc4], starfish[60];
+
+// Struct for The Mainfish //
+
+struct MC
+{
+	Sprite image;
+	RectangleShape mouth;
+	float scalex = -0.7, scalex2 = 0.7, scaley = 0.7;
+	int live;
+	bool dead = false;
+}	mc;
+
+// Main window, event and music //
+
+RenderWindow win(VideoMode(1920, 1080), "Fish Frenzy", Style::Close | Style::Titlebar);
+Event ev;
+SoundBuffer mainmusic;
+Sound mainnmusic;
+SoundBuffer effectsB[numberofsound];
+Sound effects[numberofsound];
+
+// Getting the mouseposition in the window //
+
+Vector2i mouseposition = { Mouse::getPosition(win).x,Mouse::getPosition(win).y };
+
+// Setting the mouseposition regarding to the view //
+
+Vector2f worldpos = win.mapPixelToCoords(mouseposition);
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+											   ////////////////////////////////////////////////////////////////////
+											  //////////////         FUNCTIONS DECLARATION       /////////////////
+											 ////////////////////////////////////////////////////////////////////
+
+
+void main_menu();
+void settings();
+void stageclear(int targetScore, int miniscore, int yellowscore, int lionscore, Sprite bg, Texture fish1, Texture fish2, Texture fish3);
+void level1();
+void level2();
+void gameover(Sprite bg, bool levelchoice);
+void npcrestart();
+void game_select();
+void intro();
+void credits();
+void yourname();
+void leaderboard();
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+int main()
+{
+
+	// Setting the booleans responsible for the sound effects and music buttons in settings menu to be on in the first time, then you can change it without restarting  // 
+
+	checkbox[0] = true;
+	checkbox[1] = true;
+
+	// Our Logo :) //
+	//credits();
+	intro();
+	return 0;
+}
+void main_menu() {
+
+
+	///////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////       INITIALIZATIONS       ///////////////////////
+  ///////////////////////////////////////////////////////////////////////////////
+
+	// For rand function //
+
+	srand(time(NULL));
+
+	// Sound effects //
+
+	effectsB[9].loadFromFile("./Sounds/mouseOver.mp3");
+	effects[9].setBuffer(effectsB[9]);
+
+	// Variables// 
+
+	int playbuttonhover = 0;
+	int settingsbuttonhover = 0;
+	int exitbuttonhover = 0;
+	int creditsbuttonhover = 0;
+	int leaderboardbuttonhover = 0;
+	int bubbletimer = 0, bubblecounter = 0;
+	int pos4[100];
+	for (int i = 0; i < 100; i++)
+	{
+		pos4[i] = (rand() % 930) + 150;
+	}
+
+	// Struct that contains the gamelogo, all buttons, font, all texts and a draw function for them //
+
+	struct menu
+	{
+		Sprite gamelogo;
+		Sprite buttons[5];
+		Text button_name[5];
+		Font font;
+
+		void draw(RenderWindow& window)
+		{
+			for (int i = 0; i < 5; i++)
+			{
+				window.draw(buttons[i]);
+				window.draw(button_name[i]);
+			}
+		}
+	}	mainmenu;
+
+
+	// Loading font //
+
+	mainmenu.font.loadFromFile("./Fonts/GothamKnightsMid-51v0G.otf");
+
+	// View //
+
+	View v;
+	v.setSize(1920, 1080);
+	v.setCenter(960, 540);
+
+	// Loading textures //
+
+	Texture tex, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10;
+	tex.loadFromFile("./Images/background.png");
+	tex2.loadFromFile("./Images/tree.png");
+	tex3.loadFromFile("./Images/pinkplant.png");
+	tex4.loadFromFile("./Images/logo.png");
+	tex5.loadFromFile("./Images/playlogo-02.png");
+	tex6.loadFromFile("./Images/settings-02.png");
+	tex7.loadFromFile("./Images/exit-02.png");
+	tex8.loadFromFile("./Images/credits_symbol.png");
+	tex9.loadFromFile("./Images/bubble1.png");
+	tex10.loadFromFile("./Images/leaderboardicon.png");
+
+	// Background sprite modifications //
+
+	Sprite background;
+	background.setTexture(tex);
+
+	// Tree sprite modifications //
+
+	Sprite tree;
+	tree.setTexture(tex2);
+	tree.setPosition(Vector2f((1920 / 2) - 960, 365));
+
+	// Pinkplant sprite modifications //
+
+	Sprite pinkplant;
+	pinkplant.setTexture(tex3);
+	pinkplant.setPosition(Vector2f((1920 / 2) + 450, 768));
+
+	// Game logo sprite modifications //
+
+	mainmenu.gamelogo.setTexture(tex4);
+	mainmenu.gamelogo.setPosition(Vector2f((1920 / 2) - 350, 10));
+	mainmenu.gamelogo.setScale(Vector2f((mainmenu.gamelogo.getScale().x / 1.2), mainmenu.gamelogo.getScale().y / 1.2));
+
+	// Play button sprite modifications //
+
+	mainmenu.buttons[0].setTexture(tex5);
+	mainmenu.buttons[0].setScale(Vector2f((mainmenu.gamelogo.getScale().x / 25), mainmenu.gamelogo.getScale().y / 25));
+	mainmenu.buttons[0].setPosition(Vector2f((1920 / 2) - 300, (1080 / 4) + 300));
+
+	//settings button sprite modifications //
+
+	mainmenu.buttons[1].setTexture(tex6);
+	mainmenu.buttons[1].setScale((mainmenu.gamelogo.getScale().x / 25), mainmenu.gamelogo.getScale().y / 25);
+	mainmenu.buttons[1].setPosition((1920 / 2) - 300, (1080 / 4) + 400);
+
+	// Exit button sprite modifications //
+
+	mainmenu.buttons[2].setTexture(tex7);
+	mainmenu.buttons[2].setScale((mainmenu.gamelogo.getScale().x / 25), mainmenu.gamelogo.getScale().y / 25);
+	mainmenu.buttons[2].setPosition((1920 / 2) - 300, (1080 / 4) + 500);
+
+	// Credits button sprite modifications //
+
+	mainmenu.buttons[3].setTexture(tex8);
+	mainmenu.buttons[3].setPosition(100, 100);
+
+	// Leaderboard sprite modificatoins //
+
+	mainmenu.buttons[4].setTexture(tex10);
+	mainmenu.buttons[4].setPosition(80, 210);
+
+	// "Play" text modifications //
+
+	mainmenu.button_name[0].setFont(mainmenu.font);
+	mainmenu.button_name[0].setFillColor(Color::White);
+	mainmenu.button_name[0].setString("PLAY");
+	mainmenu.button_name[0].setCharacterSize(100);
+	mainmenu.button_name[0].setPosition(Vector2f((1920 / 2) - 200, (1080 / 4) + 280));
+
+	// "Setting" text modifications //
+
+	mainmenu.button_name[1].setFont(mainmenu.font);
+	mainmenu.button_name[1].setFillColor(Color::White);
+	mainmenu.button_name[1].setString("SETTINGS");
+	mainmenu.button_name[1].setCharacterSize(100);
+	mainmenu.button_name[1].setPosition((1920 / 2) - 200, (1080 / 4) + 380);
+
+	// "Exit" text modifications //
+
+	mainmenu.button_name[2].setFont(mainmenu.font);
+	mainmenu.button_name[2].setFillColor(Color::White);
+	mainmenu.button_name[2].setString("EXIT");
+	mainmenu.button_name[2].setCharacterSize(100);
+	mainmenu.button_name[2].setPosition((1920 / 2) - 200, (1080 / 4) + 480);
+
+	// "Credits" text modifications //
+
+	mainmenu.button_name[3].setFont(mainmenu.font);
+	mainmenu.button_name[3].setFillColor(Color::White);
+	mainmenu.button_name[3].setString("CREDITS");
+	mainmenu.button_name[3].setCharacterSize(80);
+	mainmenu.button_name[3].setPosition(180, 80);
+
+	// "Leaderboard" text modifications //
+
+	mainmenu.button_name[4].setFont(mainmenu.font);
+	mainmenu.button_name[4].setFillColor(Color::White);
+	mainmenu.button_name[4].setString("LEADERBOARD");
+	mainmenu.button_name[4].setCharacterSize(80);
+	mainmenu.button_name[4].setPosition(180, 200);
+
+	// Shapes //
+
+	Vector2f size = { 130, 80 }, size2 = { 250, 85 }, size3 = { 120, 80 }, size4 = { 170, 70 }, size5 = { 285, 60 }; // credits size problem //
+	RectangleShape Playrectangle(size), settingsrectangle(size2), exitrectangle(size3), creditsrectangle(size4), leaderboardrectangle(size5);
+	Playrectangle.setPosition(760, 580);
+	settingsrectangle.setPosition(760, 680);
+	exitrectangle.setPosition(760, 780);
+	creditsrectangle.setPosition(180, 100);
+	leaderboardrectangle.setPosition(180, 230);
+
+	// Loading music //
+
+	mainmusic.loadFromFile("./Music/menuMusic.mp3");
+	mainnmusic.setBuffer(mainmusic);
+	mainnmusic.setLoop(true);
+	mainnmusic.play();
+
+	// Restarting npcfish position before entering the levels //
+
+	npcrestart();
+
+	// Setting cursor visibility //
+
+	win.setMouseCursorVisible(true);
+
+	//////////////////////////////////////////////////////////////////////
+////////////////////       GAME LOOP        //////////////////////////
+//////////////////////////////////////////////////////////////////////
+
+
+	while (win.isOpen())
+	{
+		// Getting mouse position in the screen //
+
+		Vector2i mouseposition = { Mouse::getPosition().x, Mouse::getPosition().y };
+
+		while (win.pollEvent(ev))
+		{
+			if (ev.type == Event::Closed)
+				win.close();
+		}
+
+		// Getting mouse position //
+
+		int xcoordinates = Mouse::getPosition(win).x, ycoordinates = Mouse::getPosition(win).y;
+
+		// Changing "play" text color when the mouse is in it's position //
+
+		if (xcoordinates >= Playrectangle.getPosition().x && xcoordinates <= (Playrectangle.getPosition().x + 130) && ycoordinates >= Playrectangle.getPosition().y && ycoordinates <= (Playrectangle.getPosition().y + 80))
+		{
+			mainmenu.button_name[0].setFillColor(Color::Red);
+			mainmenu.buttons[0].setScale((mainmenu.gamelogo.getScale().x / 25) + 0.005, (mainmenu.gamelogo.getScale().y / 25) + 0.005);
+			if (playbuttonhover == 0)
+			{
+				effects[9].play();
+				playbuttonhover++;
+			}
+		}
+
+		else
+		{
+			mainmenu.button_name[0].setFillColor(Color::White);
+			mainmenu.buttons[0].setScale(Vector2f((mainmenu.gamelogo.getScale().x / 25), mainmenu.gamelogo.getScale().y / 25));
+			playbuttonhover = 0;
+		}
+
+		// Going to level select menu if mouse is clicked // 
+
+		if (xcoordinates >= Playrectangle.getPosition().x && xcoordinates <= (Playrectangle.getPosition().x + 130) && ycoordinates >= Playrectangle.getPosition().y && ycoordinates <= (Playrectangle.getPosition().y + 80) && Mouse::isButtonPressed(Mouse::Left))
+		{
+			game_select();
+		}
+
+		// Changing "Settings" text color when the mouse is in it's position //
+
+		if (xcoordinates >= settingsrectangle.getPosition().x && xcoordinates <= (settingsrectangle.getPosition().x + 250) && ycoordinates >= settingsrectangle.getPosition().y && ycoordinates <= (settingsrectangle.getPosition().y + 85))
+		{
+			mainmenu.button_name[1].setFillColor(Color::Red);
+			mainmenu.buttons[1].setScale((mainmenu.gamelogo.getScale().x / 25) + 0.005, (mainmenu.gamelogo.getScale().y / 25) + 0.005);
+			if (settingsbuttonhover == 0)
+			{
+				effects[9].play();
+				settingsbuttonhover++;
+			}
+		}
+
+		else
+		{
+			mainmenu.button_name[1].setFillColor(Color::White);
+			mainmenu.buttons[1].setScale((mainmenu.gamelogo.getScale().x / 25), mainmenu.gamelogo.getScale().y / 25);
+			settingsbuttonhover = 0;
+		}
+
+		// Changing "Exit" text color when the mouse is in it's position //
+
+		if (xcoordinates >= exitrectangle.getPosition().x && xcoordinates <= (exitrectangle.getPosition().x + 120) && ycoordinates >= exitrectangle.getPosition().y && ycoordinates <= (exitrectangle.getPosition().y + 80))
+		{
+			mainmenu.button_name[2].setFillColor(Color::Red);
+			mainmenu.buttons[2].setScale((mainmenu.gamelogo.getScale().x / 25) + 0.005, (mainmenu.gamelogo.getScale().y / 25) + 0.005);
+			if (exitbuttonhover == 0)
+			{
+				effects[9].play();
+				exitbuttonhover++;
+			}
+		}
+
+		else
+		{
+			mainmenu.button_name[2].setFillColor(Color::White);
+			mainmenu.buttons[2].setScale((mainmenu.gamelogo.getScale().x / 25), mainmenu.gamelogo.getScale().y / 25);
+			exitbuttonhover = 0;
+		}
+
+		// Going to settings menu if the button is clicked //
+
+		if (xcoordinates >= settingsrectangle.getPosition().x && xcoordinates <= (settingsrectangle.getPosition().x + 250) && ycoordinates >= settingsrectangle.getPosition().y && ycoordinates <= (settingsrectangle.getPosition().y + 85) && Mouse::isButtonPressed(Mouse::Left))
+		{
+			mainnmusic.pause();
+			settings();
+		}
+
+		// Closing the game if the exit button is clicked //
+
+		if (xcoordinates >= exitrectangle.getPosition().x && xcoordinates <= (exitrectangle.getPosition().x + 120) && ycoordinates >= exitrectangle.getPosition().y && ycoordinates <= (exitrectangle.getPosition().y + 80) && Mouse::isButtonPressed(Mouse::Left))
+		{
+			win.close();
+		}
+
+		// Changing "CREDITS" text color when the mouse is in it's position //
+
+		if (xcoordinates >= creditsrectangle.getPosition().x && xcoordinates <= (creditsrectangle.getPosition().x + 170) && ycoordinates >= creditsrectangle.getPosition().y && ycoordinates <= (creditsrectangle.getPosition().y + 70))
+		{
+			mainmenu.button_name[3].setFillColor(Color::Red);
+			mainmenu.buttons[3].setScale(1.1, 1.1);
+			if (creditsbuttonhover == 0)
+			{
+				effects[9].play();
+				creditsbuttonhover++;
+			}
+		}
+
+		else
+		{
+			mainmenu.button_name[3].setFillColor(Color::White);
+			mainmenu.buttons[3].setScale(1, 1);
+			creditsbuttonhover = 0;
+		}
+
+		// Going to credits if the credits button is clicked //
+
+		if (xcoordinates >= creditsrectangle.getPosition().x && xcoordinates <= (creditsrectangle.getPosition().x + 200) && ycoordinates >= creditsrectangle.getPosition().y && ycoordinates <= (creditsrectangle.getPosition().y + 70) && Mouse::isButtonPressed(Mouse::Left))
+		{
+			credits();
+		}
+
+		// Changing "LEADERBOARD" text color when the mouse is in it's position //
+
+		if (xcoordinates >= leaderboardrectangle.getPosition().x && xcoordinates <= (leaderboardrectangle.getPosition().x + 285) && ycoordinates >= leaderboardrectangle.getPosition().y && ycoordinates <= (leaderboardrectangle.getPosition().y + 60))
+		{
+			mainmenu.button_name[4].setFillColor(Color::Red);
+			mainmenu.buttons[4].setScale(1.03, 1.03);
+			if (leaderboardbuttonhover == 0)
+			{
+				effects[9].play();
+				leaderboardbuttonhover++;
+			}
+		}
+
+		else
+		{
+			mainmenu.button_name[4].setFillColor(Color::White);
+			mainmenu.buttons[4].setScale(1, 1);
+			leaderboardbuttonhover = 0;
+		}
+
+
+		// Going to leaderboard if the leaderboard button is clicked //
+
+
+		if (xcoordinates >= leaderboardrectangle.getPosition().x && xcoordinates <= (leaderboardrectangle.getPosition().x + 285) && ycoordinates >= leaderboardrectangle.getPosition().y && ycoordinates <= (leaderboardrectangle.getPosition().y + 60) & Mouse::isButtonPressed(Mouse::Left))
+		{
+			leaderboard();
+		}
+
+		// Moving bubbles // 
+
+		for (int i = 0; i < 200; i++)
+		{
+			bubbles[i].image.move(bubbles[i].speed, 0);
+		}
+
+		// Respawn timer for bubbles //
+
+		if (bubbletimer > 50)
+		{
+			bubbles[bubblecounter].image.setTexture(tex9);
+			bubbles[bubblecounter].image.setPosition(1900, pos4[bubblecounter]);
+			bubbles[bubblecounter].image.setScale(0.025, 0.025);
+			bubbles[bubblecounter].image.setColor(Color(255, 255, 255, 100));
+			bubbles[bubblecounter].speed = -(rand() % 6) - 1;
+			bubblecounter++;
+			bubbletimer = 0;
+		}
+
+		if (bubbletimer <= 600)
+		{
+			bubbletimer++;
+		}
+
+		if (bubbles[199].image.getPosition().x < -40)
+		{
+			bubblecounter = 0;
+		}
+
+		win.clear();
+		win.setView(v);
+		win.draw(background);
+		for (int i = 0; i < 100; i++)
+		{
+			win.draw(bubbles[i].image);
+		}
+		win.draw(tree);
+		win.draw(pinkplant);
+		win.draw(mainmenu.gamelogo);
+		mainmenu.draw(win);
+		for (int i = 0; i < 100; i++)
+		{
+			win.draw(bubbles[i].image);
+		}
+		win.display();
+	}
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+}
+void level1()
+{
+	////////////////////////////////////////////////////////
+//////////////        SOUND EFFECTS      ///////////////
+////////////////////////////////////////////////////////
+
+// Reverting to level1 music // 
+
+	mainmusic.loadFromFile("./Music/TRACK1.mp3");
+	mainnmusic.setBuffer(mainmusic);
+	mainnmusic.setLoop(true);
+	mainnmusic.play();
+
+	bool fadeIn = true;
+	bool fadeOut = false;
+	float opacityfactor = 0.0f;
+	In_game_level = true;
+
+	// EATING //
+
+	effectsB[0].loadFromFile("./Sounds/BITE1.mp3");
+	effects[0].setBuffer(effectsB[0]);
+	effectsB[1].loadFromFile("./Sounds/BITE2.mp3");
+	effects[1].setBuffer(effectsB[1]);
+	effectsB[2].loadFromFile("./Sounds/BITE3.mp3");
+	effects[2].setBuffer(effectsB[2]);
+	effectsB[3].loadFromFile("./Sounds/BITE4.mp3");
+	effects[3].setBuffer(effectsB[3]);
+
+	// Fish eating pearls // 
+
+	effectsB[10].loadFromFile("./Sounds/oysterPearl.mp3");
+	effects[10].setBuffer(effectsB[10]);
+
+	// GrowUp //
+
+	effectsB[4].loadFromFile("./Sounds/playerGrow.mp3");
+	effects[4].setBuffer(effectsB[4]);
+
+
+	// Player Dead //
+
+	effectsB[5].loadFromFile("./Sounds/playerDie.mp3");
+	effects[5].setBuffer(effectsB[5]);
+
+	// Stage cleared //
+
+	effectsB[6].loadFromFile("./Sounds/stageClear.mp3");
+	effects[6].setBuffer(effectsB[6]);
+
+	// Begin //
+
+	effectsB[7].loadFromFile("./Sounds/playerSpawn.mp3");
+	effects[7].setBuffer(effectsB[7]);
+	effects[7].play();
+
+	// Oyster eating main fish //
+
+	effectsB[8].loadFromFile("./Sounds/oysterBite.mp3");
+	effects[8].setBuffer(effectsB[8]);
+
+	// Water sound //
+
+	effectsB[9].loadFromFile("./Sounds/mouseOver.mp3");
+	effects[9].setBuffer(effectsB[9]);
+
+	// Starbubble sound // 
+
+	effectsB[12].loadFromFile("./Sounds/starPickup.mp3");
+	effects[12].setBuffer(effectsB[12]);
+
+	// Mermaid sound // 
+
+	effectsB[13].loadFromFile("./Sounds/Mermaid.mp3");
+	effects[13].setBuffer(effectsB[13]);
+
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	// Resetting number of lives //
+
+	mc.live = 3;
+
+	// Initialize lifestate // 
+
+	mc.dead = false;
+
+	// Initialize size // 
+
+	mc.scalex = -0.7, mc.scalex2 = 0.7, mc.scaley = 0.7;
+
+	// Cursor visibility //
+
+	win.setMouseCursorVisible(false);
+
+	// Frames //
+
+	win.setFramerateLimit(60);
+
+	// Timers //
+
+	Clock fishanimation, respawn, invincibletimer, mcrespawn, stagecleartimer, eating, lioneating, yelloweating, shelltime, fadingtimer, gameovertimer;
+
+	// Vectors, variables and booleans //
+
+	Vector2f s = { 1920, 150 }, s2 = { 20, 1080 };
+	Vector2f velocity(0.f, 0.f);
+	Vector2f  pos, vel;
+	Vector2f bvelocity[20];
+	Vector2f bpos[20];
+
+	float  deltatime = 0, grav = 100, gravity = 9.8f, delta = 0.1f;
+	int mc_frame = 0, k = 0, f = 0, d = 0, n;
+	scorelevel1 = 0;
+	int minifishscore = 0, yellowfishscore = 0, lionfishscore = 0, soundcounter = 0, stagecounter = 0, gameovercounter = 0;
+	int mini_frame = 0;
+	int yfish_frame = 0;
+	int lfish_frame = 0;
+	int yellowfishspawntimer = 0;
+	int yellowfishcounter = 0;
+	int lionfishspawntimer = 0;
+	int lionfishcounter = 0;
+	int yellowindex = 0;
+	int lionindex = 0;
+	int cnt = 0;
+	int stbcount = 0;
+	int mcrespawncounter = 0;
+	int mermaidsoundcounter = 0;
+	int mermaidframe = 0;
+	int continuebuttonhover = 0;
+	int backmenubuttonhover = 0;
+	int starbubble_timer = 0, starbubble_counter = 0;
+	bool r, l, phase2 = false, phase3 = false, mcdead = false, invincible = true, lose = false, winner = false, pause = false;
+	bool hit = false, yhit = false, lhit = false, minirespawn = false, yellowrespawn = false, lionrespawn = false, shellisopen = false, drawpearl = false, mermaidfound = false;
+	bool blackpearl = false, whitepearl = false;
+	bool starbubbledraw[9];
+	for (int i = 0; i < 9; i++)
+		starbubbledraw[i] = true;
+
+	// View //
+
+	View view;
+	view.setSize(1920 / 1.2f, 1080 / 1.2f);
+	view.setCenter(1920 / 2.f, 1080 / 2.f);
+
+
+
+	///////////////////////////////////////////////////////
+   ///////////////      TEXTURES     /////////////////////
+  ///////////////////////////////////////////////////////
+
+// Mainfish and npcfish textures //
+
+	Texture tex, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10, tex11;
+	tex.loadFromFile("./Images/angelfish.png");
+	tex2.loadFromFile("./Images/game.jpg");
+	tex3.loadFromFile("./Images/minnow.png");
+	tex4.loadFromFile("./Images/yellowfish2.png");
+	tex5.loadFromFile("./Images/lionfish2.png");
+	tex6.loadFromFile("./Images/oyster.png");
+	tex7.loadFromFile("./Images/pearls.png");
+	tex8.loadFromFile("./Images/mountain.png");
+	tex9.loadFromFile("./Images/2000.png");
+	tex10.loadFromFile("./Images/starbubble.png");
+	tex11.loadFromFile("./Images/bubble1.png");
+
+	// Scorebar textures //
+
+	Texture menutex, menufish1tex1, menufishtex2, menufishtex3, scoreBar;
+	menutex.loadFromFile("./Images/bubble.png");
+	menufish1tex1.loadFromFile("./Images/mini.png");
+	menufishtex2.loadFromFile("./Images/yellow.png");
+	menufishtex3.loadFromFile("./Images/lion.png");
+	scoreBar.loadFromFile("./Images/scorebar2.png");
+
+	// Pause menu textures //
+
+	Texture  pausemenu, resumedark, resumelight, backmenudark, backmenulight;
+	pausemenu.loadFromFile("./Images/PAUSED.png");
+	resumedark.loadFromFile("./Images/RESUME_dark.png");
+	resumelight.loadFromFile("./Images/RESUME_light.png");
+	backmenulight.loadFromFile("./Images/MAINMENU_light.png");
+	backmenudark.loadFromFile("./Images/MAINMENU_dark.png");
+	menutex.setSmooth(true);
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+										///////////////////////////////////////////////////////
+									   ///////////////      Sprites      /////////////////////
+									  ///////////////////////////////////////////////////////                        
+
+
+
+	// Background sprite //
+
+	Sprite back;
+	back.setTexture(tex2);
+
+	// bonus score sprites // 
+
+	Sprite pearl, shell, mountain, mermaid, starbubble[9];
+	pearl.setTexture(tex7);
+	pearl.setTextureRect(IntRect(0, 0, 50, 50));
+	pearl.setPosition(1690, 865);
+	shell.setTexture(tex6);
+	shell.setScale(1.7, 1.7);
+	shell.setTextureRect(IntRect(0, 0, 106, 106));
+	shell.setPosition(1640, 770);
+	mountain.setTexture(tex8);
+	mountain.setScale(1.3, 1.3);
+	mountain.setPosition(1350, 900);
+	mermaid.setTexture(tex9);
+	mermaid.setTextureRect(IntRect(0, 0, 301, 102));
+	mermaid.setPosition(1920, 540);
+	for (int i = 0; i < 9; i++)
+		starbubble[i].setTexture(tex10);
+
+	// Mainfish sprite //
+
+	mc.image.setTexture(tex);
+	mc.image.setOrigin(62.5, 52.5);
+	mc.image.setTextureRect(IntRect(0, 0, 125, 106.5));
+	mc.image.setPosition(300, 300);
+	mc.image.setScale(mc.scalex, mc.scaley);
+
+	// Scorebar sprites //
+
+	Sprite MenuFish1, MenuFish2, MenuFish3;
+	MenuFish1.setTexture(menufish1tex1);
+	MenuFish1.setScale(Vector2f(0.5f, 0.5f));
+	MenuFish2.setTexture(menufishtex2);
+	MenuFish2.setScale(Vector2f(0.5f, 0.5f));
+	MenuFish3.setTexture(menufishtex3);
+	MenuFish3.setScale(Vector2f(0.40f, 0.40f));
+
+	// Pause menu sprites // 
+
+	Sprite pmenu, resume, bmenu;
+	pmenu.setTexture(pausemenu);
+	resume.setTexture(resumedark);
+	bmenu.setTexture(backmenudark);
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+											 ///////////////////////////////////////////////////////
+											///////////////      SHAPES       /////////////////////
+										   ///////////////////////////////////////////////////////
+
+
+
+
+
+   // Scorebar rectangles and triangles //
+
+	RectangleShape rectangle(Vector2f(1920, 150)), BarRectangle(Vector2f(400, 23)), BarProgress(Vector2f(0, 15));
+	CircleShape tringle1(17, 3), tringle2(17, 3), shellcircle(67), bubblebox[9];
+	mc.mouth.setSize(Vector2f(20, 20));
+	rectangle.setTexture(&scoreBar);
+	rectangle.setPosition(0, 0);
+	BarRectangle.setFillColor(Color(0, 0, 0, 130));
+	BarProgress.setFillColor(Color(237, 182, 38));
+	BarRectangle.setPosition(0, 0);
+	BarProgress.setPosition(0, 0);
+	BarRectangle.setTexture(&scoreBar);
+	tringle1.setFillColor(Color(250, 1, 1));
+	tringle1.setPosition(0, 0);
+	tringle2.setFillColor(Color(250, 1, 1));
+	tringle2.setPosition(0, 0);
+	shellcircle.setPosition(1650, 790);
+
+	for (int i = 0; i < 9; i++)  //bubbles hit box 
+	{
+		bubblebox[i].setPosition(100, 100);
+		bubblebox[i].setRadius(28.5);
+
+	}
+
+	// Pause menu rectangles //
+
+	RectangleShape prect(Vector2f(250, 90)), prect2(Vector2f(250, 90)), rectascore(Vector2f(125, 70)), rectalives(Vector2f(50, 50));
+	rectalives.setFillColor(Color(102, 66, 41, 130));
+	rectascore.setFillColor(Color(102, 66, 41, 130));
+	rectalives.setPosition(0, 0);
+	rectascore.setPosition(0, 0);
+
+
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+													   ////////////////////////////////////////////////////////////////
+													  ///////////////      TEXTS AND FONTS       /////////////////////
+													 ////////////////////////////////////////////////////////////////
+
+
+	 // Font loading //
+
+	Font grfont;
+	grfont.loadFromFile("./Fonts/GothamKnightsMidCondense-2OMGv.OTF");
+
+	// Scorebar texts //
+
+	Text growth, menut, livess, scoree, scorecount, livescount;
+	livescount.setFont(grfont);
+	livescount.setPosition(800, 40);
+	livescount.setCharacterSize(75);
+	livescount.setFillColor(Color::White);
+	scorecount.setFont(grfont);
+	scorecount.setPosition(800, 40);
+	scorecount.setCharacterSize(85);
+	scorecount.setFillColor(Color::White);
+	livess.setFont(grfont);
+	livess.setString("LIVES");
+	livess.setPosition(800, 40);
+	livess.setCharacterSize(70);
+	livess.setFillColor(Color(102, 66, 41, 200));
+	scoree.setFont(grfont);
+	scoree.setString("SCORE");
+	scoree.setPosition(800, 40);
+	scoree.setCharacterSize(70);
+	scoree.setFillColor(Color(102, 66, 41, 200));
+	growth.setFont(grfont);
+	growth.setString("GROWTH");
+	growth.setPosition(800, 40);
+	growth.setCharacterSize(50);
+	growth.setFillColor(Color(102, 66, 41, 200));
+	menut.setFont(grfont);
+	menut.setString("MENU");
+	menut.setPosition(800, 40);
+	menut.setCharacterSize(50);
+	menut.setFillColor(Color(102, 66, 41, 200));
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	// initializing starbubbles launchpoint // 
+
+	for (int i = 0; i < 9; i++)
+	{
+		starbubble[i].setScale(1.5, 1.5);
+		bvelocity[i].x = 5;
+		bvelocity[i].y = -20;
+		bpos[i].x = 100;
+		bpos[i].y = 100;
+	}
+
+	// Random Position for the npcfish //
+
+	int var = rand() % 5;
+	srand(var);
+	int  pos1[200], pos2[200], pos3[200], pos4[200];
+	int stop = (rand() % 30) + 70, stop2 = (rand() % 20) + 40, stop3 = (rand() % 10) + 30;
+
+	for (int i = 0; i < 100; i++)
+	{
+		pos1[i] = (rand() % 930) + 300;
+		pos2[i] = (rand() % 930) + 300;
+		pos3[i] = (rand() % 930) + 300;
+		pos4[i] = (rand() % 930) + 100;
+	}
+	int bubbletimer = 0, bubblecounter = 0;
+	int minifishspawntimer = 0;
+	int minifishcounter = 0;
+
+	eating.restart();
+	lioneating.restart();
+	yelloweating.restart();
+	shelltime.restart();
+
+	while (win.isOpen())
+	{
+		// Setting the inviciblity for the mainfish when it respawns //
+		if (invincibletimer.getElapsedTime().asSeconds() < 3 && invincible)
+		{
+			mc.image.setColor(Color(255, 255, 255, 150));
+			invincible = true;
+		}
+		else
+		{
+			mc.image.setColor(Color(255, 255, 255, 255));
+			invincibletimer.restart();
+			invincible = false;
+		}
+
+		mouseposition = { Mouse::getPosition(win).x,Mouse::getPosition(win).y };
+		worldpos = win.mapPixelToCoords(mouseposition);
+
+		if (mc.dead && mcrespawncounter == 0)
+		{
+			mcrespawncounter++;
+			mcrespawn.restart();
+		}
+
+		// Respawning the mainfish after it's death //
+
+		if (mcrespawn.getElapsedTime().asSeconds() >= 3 && mc.dead && mc.live != 0)
+		{
+			mc.image.setPosition(960, 0);
+			mc.dead = false;
+			invincible = true;
+		}
+		if (mc.live == 0)
+		{
+
+			if (gameovercounter == 0)
+			{
+				gameovertimer.restart();
+				gameovercounter++;
+			}
+			if (gameovertimer.getElapsedTime().asSeconds() >= 1)
+			{
+				lose = true;
+				gameovertimer.restart();
+			}
+
+		}
+
+		while (win.pollEvent(ev))
+		{
+			if (ev.type == Event::Closed)
+				win.close();
+			if (Keyboard::isKeyPressed(Keyboard::Escape))
+			{
+				game_select();
+			}
+			if (Keyboard::isKeyPressed(Keyboard::P))
+			{
+				pause = true;
+				win.setMouseCursorVisible(true);
+			}
+			if (pause == false)
+			{
+				win.setMouseCursorVisible(false);
+			}
+		}
+
+		/////////////////////////////////////////////////////
+	   ///////////////       MOVEMENTS      ////////////////
+	  /////////////////////////////////////////////////////
+
+		Vector2f direction = worldpos - mc.image.getPosition();
+		float distance = sqrt(direction.x * direction.x + direction.y * direction.y);
+
+		// Normalize direction vector //
+
+		if (distance != 0) {
+			direction /= distance;
+		}
+
+		// Apply dampening //
+
+		velocity *= (1 - dampeningFactor);
+
+		// Apply velocity based on distance //
+
+		velocity += direction * (0.001f * distance);
+
+		// Mainfish movement //
+
+		if (pause == false && mc.dead == false)
+		{
+			mc.image.move(velocity);
+		}
+
+		// Right and left direction for mainfish //
+
+		if (worldpos.x > mc.image.getPosition().x && pause == false)
+		{
+
+			mc.scalex2 = float(abs(mc.scalex));
+			r = true;
+			l = false;
+			if (phase2 == false && phase3 == false)
+			{
+				mc.mouth.setPosition(mc.image.getPosition().x + 30, mc.image.getPosition().y - 10);
+			}
+			else if (phase2 && phase3 == false)
+			{
+				mc.mouth.setPosition(mc.image.getPosition().x + 40, mc.image.getPosition().y - 10);
+			}
+			else
+			{
+				mc.mouth.setPosition(mc.image.getPosition().x + 50, mc.image.getPosition().y - 10);
+			}
+		}
+		else if (worldpos.x < mc.image.getPosition().x && pause == false)
+		{
+			r = false;
+			l = true;
+			if (phase2 == false && phase3 == false)
+			{
+				mc.mouth.setPosition(mc.image.getPosition().x - 50, mc.image.getPosition().y - 10);
+			}
+			else if (phase2 && phase3 == false)
+			{
+				mc.mouth.setPosition(mc.image.getPosition().x - 65, mc.image.getPosition().y - 10);
+			}
+			else
+			{
+				mc.mouth.setPosition(mc.image.getPosition().x - 80, mc.image.getPosition().y - 10);
+			}
+		}
+		if (r)
+		{
+			mc.image.setScale(mc.scalex, mc.scaley);
+		}
+		else if (l)
+		{
+			mc.image.setScale(mc.scalex2, mc.scaley);
+		}
+
+		// Minifish movement //
+
+		for (int i = 0; i < npc1; i += 1)
+		{
+			if (lose == false && pause == false && minirespawn && smallfish[i].alive)
+				smallfish[i].image.move(smallfish[i].speed, 0);
+		}
+
+		// Yellowfish movement //
+
+		for (int i = 0; i < npc2; i += 1)
+		{
+			if (lose == false && pause == false && yellowrespawn && mediumfish[i].alive)
+				mediumfish[i].image.move(mediumfish[i].speed, 0);
+		}
+
+		// Lionfish movement //
+
+
+		for (int i = 0; i < npc3; i += 1)
+		{
+			if (phase2)
+			{
+				if (lose == false && pause == false && lionrespawn && largefish[i].alive)
+				{
+					largefish[i].image.move(largefish[i].speed, 0);
+				}
+			}
+		}
+
+		// bubbles movement //
+
+		for (int i = 0; i < 200; i++)
+		{
+			bubbles[i].image.move(bubbles[i].speed, 0);
+		}
+
+		for (int i = 0; i < npc2; i++)
+		{
+			if (lose == false && pause == false && winner == false)
+				starfish[i].image.move(0, starfish[i].speed);
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+																 /////////////////////////////////////////////////////////////////
+																///////////////////	       ANIMATIONS       /////////////////////
+															   /////////////////////////////////////////////////////////////////
+
+
+
+
+
+		// Frames incremention //
+
+		if (fishanimation.getElapsedTime().asSeconds() > 0.1)
+		{
+			mc_frame++;
+			mini_frame++;
+			yfish_frame++;
+			lfish_frame++;
+			mermaidframe++;
+			fishanimation.restart();
+		}
+
+		// Mainfish moving animation //
+
+		if (pause == false && hit == false)
+		{
+			mc_frame = mc_frame % 15;
+			mc.image.setTextureRect(IntRect(mc_frame * 126, 212.5, 126, 106.5));
+		}
+
+		// Mainfish eating animation after hiting any npcfish //
+
+		if (hit)
+		{
+			if (eating.getElapsedTime().asSeconds() > 0.05)
+			{
+
+				k++;
+				k = k % 6;
+				mc.image.setTextureRect(IntRect(126 * k, 0, 126, 106.5));
+				eating.restart();
+			}
+			if (k == 5)
+			{
+				hit = false;
+			}
+		}
+
+		// Minifish moving animation //
+
+		for (int i = 0; i < npc1 && pause == false; i += 1)
+		{
+			mini_frame = mini_frame % 15;
+			smallfish[i].image.setTextureRect(IntRect(mini_frame * 66, 0, 66, 47));
+		}
+
+		// Yellowfish moving animation //
+
+		for (int i = 0; i < npc2 && pause == false && yhit == false; i++)
+		{
+			yfish_frame = yfish_frame % 14;
+			mediumfish[i].image.setTextureRect(IntRect(yfish_frame * 166.219, 107, 166.219, 107));
+		}
+
+		// Yellowfish eating mainfish animation //
+
+		if (yhit)
+		{
+			if (yelloweating.getElapsedTime().asSeconds() > 0.1)
+			{
+
+				f++;
+				f = f % 5;
+				mediumfish[yellowindex].image.setTextureRect(IntRect(166.219 * f, 0, 166.219, 107));
+				if (mediumfish[yellowindex].mouth2.getGlobalBounds().intersects(mc.image.getGlobalBounds()) && mc.dead == false && !phase2 && !phase3)
+				{
+					mc.dead = true;
+					mc.live--;
+					effects[5].play();
+				}
+				yelloweating.restart();
+			}
+			if (f == 4)
+			{
+				yhit = false;
+
+			}
+		}
+
+		// Lionfish moving animation //
+
+		for (int i = 0; i < npc3 && pause == false && lhit == false; i++)
+		{
+			lfish_frame = lfish_frame % 14;
+			largefish[i].image.setTextureRect(IntRect(lfish_frame * 182, 324, 182, 162));
+		}
+
+		// Lionfish eating mainfish animation //
+
+		if (lhit)
+		{
+			if (lioneating.getElapsedTime().asSeconds() > 0.1)
+			{
+				d++;
+				d = d % 6;
+				largefish[lionindex].image.setTextureRect(IntRect(d * 182, 0, 182, 161.25));
+				if (largefish[lionindex].mouth2.getGlobalBounds().intersects(mc.image.getGlobalBounds()) && mc.dead == false && !phase3)
+				{
+					mc.dead = true;
+					mc.live--;
+					effects[5].play();
+				}
+				lioneating.restart();
+			}
+			if (d == 5)
+			{
+				lhit = false;
+
+			}
+		}
+
+		// mermaid moving animation // 
+
+		if (mermaidfound && pause == false)
+		{
+
+			mermaidframe = mermaidframe % 20;
+			mermaid.setTextureRect(IntRect(mermaidframe * 301, 0, 301, 101));
+		}
+
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+													   ////////////////////////////////////////////////////////
+													  ///////////////        COLLISIONS       ////////////////
+													 ////////////////////////////////////////////////////////
+
+
+
+
+		// Mainfish eating minifish //
+
+		for (int i = 0; i < stop; i += 1)
+		{
+			if (mc.mouth.getGlobalBounds().intersects(smallfish[i].image.getGlobalBounds()) && smallfish[i].alive && mcdead == false && lose == false)
+			{
+				hit = true;
+				smallfish[i].alive = false;
+				scorelevel1 += 10;
+				BarProgress.setSize(Vector2f(BarProgress.getSize().x + 6.7, BarProgress.getSize().y));
+				effects[0].play();
+				minifishscore++;
+			}
+		}
+
+		// yellowfish eating smallfish //
+
+		for (int i = 0; i < npc2; i++)
+		{
+			for (int j = 0; j < npc1; j++)
+			{
+				if (mediumfish[i].mouth2.getGlobalBounds().intersects(smallfish[j].image.getGlobalBounds()) && pause == false && smallfish[j].alive && mediumfish[i].alive && lose == false)
+				{
+					yhit = true;
+					smallfish[j].alive = false;
+					yellowindex = i;
+				}
+			}
+		}
+
+		// lionfish eating smallfish //
+
+		for (int i = 0; i < npc3; i++)
+		{
+			for (int j = 0; j < npc1; j++)
+			{
+				if (largefish[i].mouth2.getGlobalBounds().intersects(smallfish[j].image.getGlobalBounds()) && pause == false && smallfish[j].alive && largefish[i].alive && lose == false)
+				{
+					lhit = true;
+					smallfish[j].alive = false;
+					lionindex = i;
+				}
+			}
+		}
+		// lionfish eating yellowfish // 
+
+		for (int i = 0; i < npc3; i++)
+		{
+			for (int j = 0; j < npc2; j++)
+			{
+				if (largefish[i].mouth2.getGlobalBounds().intersects(mediumfish[j].image.getGlobalBounds()) && pause == false && mediumfish[j].alive && largefish[i].alive && lose == false)
+				{
+					lhit = true;
+					mediumfish[j].alive = false;
+					lionindex = i;
+				}
+			}
+		}
+
+		// shell collision //
+
+		if (mc.image.getGlobalBounds().intersects(shellcircle.getGlobalBounds()) && shellisopen == false && shelltime.getElapsedTime().asSeconds() > 4.96 && shelltime.getElapsedTime().asSeconds() < 5 && pause == false && winner == false)
+		{
+			mc.dead = true;
+			mc.live--;
+			shellisopen = true;
+			effects[8].play();
+			effects[5].play();
+		}
+
+		if (mc.image.getGlobalBounds().intersects(pearl.getGlobalBounds()) && drawpearl && whitepearl)
+		{
+			hit = true;
+			drawpearl = false;
+			scorelevel1 += 150;
+			BarProgress.setSize(Vector2f(BarProgress.getSize().x + 30, BarProgress.getSize().y));
+			effects[10].play();
+			whitepearl = false;
+		}
+
+		if (mc.image.getGlobalBounds().intersects(pearl.getGlobalBounds()) && drawpearl && blackpearl && !phase2 && !phase3)
+		{
+			hit = true;
+			drawpearl = false;
+			scorelevel1 += 300;
+			BarProgress.setSize(Vector2f(67.5, BarProgress.getSize().y)); // ???
+			effects[10].play();
+			blackpearl = false;
+		}
+
+		if (mc.image.getGlobalBounds().intersects(pearl.getGlobalBounds()) && drawpearl && blackpearl && phase2 && !phase3)
+		{
+			hit = true;
+			drawpearl = false;
+			scorelevel1 += 300;
+			BarProgress.setSize(Vector2f(213.5, BarProgress.getSize().y));
+			effects[10].play();
+			blackpearl = false;
+		}
+
+		if (mc.image.getGlobalBounds().intersects(pearl.getGlobalBounds()) && drawpearl && blackpearl && phase3)
+		{
+			hit = true;
+			drawpearl = false;
+			blackpearl = false;
+			scorelevel1 += 300;
+			BarProgress.setSize(Vector2f(392.5, BarProgress.getSize().y));
+			effects[10].play();
+
+		}
+
+		// Collision of main fish with the scoreboard // 
+
+		if (mc.image.getGlobalBounds().intersects(rectangle.getGlobalBounds()))
+		{
+			mc.image.setPosition(mc.image.getPosition().x, rectangle.getPosition().y + 185);
+		}
+		if (mc.image.getGlobalBounds().intersects(rectangle.getGlobalBounds()) && phase2)
+		{
+			mc.image.setPosition(mc.image.getPosition().x, rectangle.getPosition().y + 210);
+		}
+		if (mc.image.getGlobalBounds().intersects(rectangle.getGlobalBounds()) && phase3)
+		{
+			mc.image.setPosition(mc.image.getPosition().x, rectangle.getPosition().y + 230);
+		}
+
+		// Mainfish eating starfish //
+
+		for (int i = 0; i < npc2; i++)
+		{
+			if (mc.mouth.getGlobalBounds().intersects(starfish[i].image.getGlobalBounds()) && starfish[i].alive && mcdead == false && lose == false && winner == false)
+			{
+				hit = true;
+				starfish[i].alive = false;
+				scorelevel1 += 40;
+				effects[0].play();
+				effects[12].play();
+			}
+		}
+
+		// Mainfish eating yellowfish // 
+
+		for (int i = 0; i < stop2; i += 1)
+		{
+			if (mc.mouth.getGlobalBounds().intersects(mediumfish[i].image.getGlobalBounds()) && phase2 && mediumfish[i].alive && mcdead == false && lose == false)
+			{
+				hit = true;
+				mediumfish[i].alive = false;
+				scorelevel1 += 20;
+				BarProgress.setSize(Vector2f(BarProgress.getSize().x + 13.4, BarProgress.getSize().y));
+				yellowfishscore++;
+				effects[1].play();
+			}
+
+		}
+
+		// Mainfish eating lionfish //
+
+		for (int i = 0; i < stop3; i += 1)
+		{
+			if (mc.mouth.getGlobalBounds().intersects(largefish[i].image.getGlobalBounds()) && phase3 && largefish[i].alive && mcdead == false && lose == false)
+			{
+				hit = true;
+				largefish[i].alive = false;
+				scorelevel1 += 30;
+				BarProgress.setSize(Vector2f(BarProgress.getSize().x + 20.1, BarProgress.getSize().y));
+				lionfishscore++;
+				effects[2].play();
+			}
+		}
+
+		// Mainfish eating starbubbles (mermaid) // 
+
+		for (int i = 0; i < 9; i++)
+		{
+			if (mc.mouth.getGlobalBounds().intersects(bubblebox[i].getGlobalBounds()) && mcdead == false && lose == false && starbubbledraw[i])
+			{
+				hit = true;
+				starbubbledraw[i] = false;
+				scorelevel1 += 40;
+				effects[0].play();
+				effects[12].play();
+			}
+		}
+
+		// Phase 2 for mainfish //
+
+		if (BarProgress.getSize().x >= 66)
+		{
+			mc.mouth.setSize(Vector2f(30, 30));
+			mc.scalex2 = 1.2;
+			mc.scalex = -1.2;
+			mc.scaley = 1.2;
+			phase2 = true;
+			if (soundcounter == 0)
+			{
+
+				effects[4].play();
+				soundcounter++;
+			}
+		}
+
+		// Phase 3 for mainfish //
+
+		if (BarProgress.getSize().x >= 211)
+		{
+			mc.mouth.setSize(Vector2f(40, 40));
+			mc.scalex2 = 1.6;
+			mc.scalex = -1.6;
+			mc.scaley = 1.6;
+			phase3 = true;
+			if (soundcounter == 1)
+			{
+
+				effects[4].play();
+				soundcounter++;
+			}
+
+		}
+
+		// Yellowfish eating mainfish //
+
+		for (int i = 0; i < stop2 && phase2 == false && mc.dead == false && mediumfish[i].alive && invincible == false; i++)
+		{
+			for (int j = 0; j < stop2 && mediumfish[i].mouth2.getGlobalBounds().intersects(mc.image.getGlobalBounds()); j++)
+			{
+				yhit = true;
+				yellowindex = i;
+			}
+		}
+
+		// Lionfish eating mainfish //
+
+		for (int i = 0; i < stop3 && phase2 && phase3 == false && mc.dead == false && largefish[i].alive && invincible == false; i++)
+		{
+			for (int j = 0; j < stop3 && largefish[i].mouth2.getGlobalBounds().intersects(mc.image.getGlobalBounds()); j++)
+			{
+				lhit = true;
+				lionindex = i;
+			}
+		}
+
+		// Updating score counter // 
+
+		scorecount.setString(to_string(scorelevel1));
+		livescount.setString(to_string(mc.live));
+
+		// Restarting Growth Bar // 
+
+		if (mc.dead == true && phase2 == false && phase3 == false)
+		{
+			BarProgress.setSize(Vector2f(0.0, BarProgress.getSize().y));
+		}
+		if (mc.dead && phase2 && phase3 == false)
+		{
+
+			BarProgress.setSize(Vector2f(67.5, BarProgress.getSize().y));
+		}
+		if (mc.dead && phase3)
+		{
+
+			BarProgress.setSize(Vector2f(213.5, BarProgress.getSize().y));
+		}
+
+		// Level done //
+
+		if (BarProgress.getSize().x >= 391) // 391
+		{
+			winner = true;
+			mermaidfound = true;
+			BarProgress.setSize(Vector2f(391, BarProgress.getSize().y));
+			if (stagecounter == 0)
+			{
+				stagecleartimer.restart();
+				stagecounter++;
+			}
+			if (stagecleartimer.getElapsedTime().asSeconds() >= 1)
+			{
+				stagecleartimer.restart();
+			}
+		}
+
+		if (mermaid.getPosition().x < -310)
+		{
+			effects[6].play();
+			stageclear(scorelevel1, minifishscore, yellowfishscore, lionfishscore, back, menufish1tex1, menufishtex3, menufishtex2);
+		}
+
+		if (mermaidfound && pause == false)
+		{
+			mermaid.move(-3, 0);
+
+			if (mermaid.getPosition().x < 1700)
+			{
+
+				if (stbcount == 0)
+				{
+					bpos[0].y = mermaid.getPosition().y;
+					bpos[0].x = mermaid.getPosition().x + 60;
+
+					stbcount++;
+				}
+
+				bvelocity[0].y += gravity * delta; // Apply gravity
+				bpos[0] += bvelocity[0] * delta; // Update position based on velocity
+
+				starbubble[0].setPosition(bpos[0]);
+				bubblebox[0].setPosition(bpos[0]);
+			}
+			if (mermaid.getPosition().x < 1500)
+			{
+
+				if (stbcount == 1)
+				{
+
+					bpos[1].y = mermaid.getPosition().y;
+					bpos[1].x = mermaid.getPosition().x + 60;
+
+					stbcount++;
+				}
+
+				bvelocity[1].y += gravity * delta; // Apply gravity
+				bpos[1] += bvelocity[1] * delta; // Update position based on velocity
+
+				starbubble[1].setPosition(bpos[1]);
+				bubblebox[1].setPosition(bpos[1]);
+			}
+			if (mermaid.getPosition().x < 1300)
+			{
+
+				if (stbcount == 2)
+				{
+
+					bpos[2].y = mermaid.getPosition().y;
+					bpos[2].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[2].y += gravity * delta; // Apply gravity
+				bpos[2] += bvelocity[2] * delta; // Update position based on velocity
+
+				starbubble[2].setPosition(bpos[2]);
+				bubblebox[2].setPosition(bpos[2]);
+			}
+			if (mermaid.getPosition().x < 1100)
+			{
+
+				if (stbcount == 3)
+				{
+
+					bpos[3].y = mermaid.getPosition().y;
+					bpos[3].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[3].y += gravity * delta; // Apply gravity
+				bpos[3] += bvelocity[3] * delta; // Update position based on velocity
+				starbubble[3].setPosition(bpos[3]);
+				bubblebox[3].setPosition(bpos[3]);
+
+			}
+			if (mermaid.getPosition().x < 900)
+			{
+
+				if (stbcount == 4)
+				{
+
+					bpos[4].y = mermaid.getPosition().y;
+					bpos[4].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[4].y += gravity * delta; // Apply gravity
+				bpos[4] += bvelocity[4] * delta; // Update position based on velocity
+				starbubble[4].setPosition(bpos[4]);
+				bubblebox[4].setPosition(bpos[4]);
+
+			}
+			if (mermaid.getPosition().x < 700)
+			{
+
+				if (stbcount == 5)
+				{
+
+					bpos[5].y = mermaid.getPosition().y;
+					bpos[5].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[5].y += gravity * delta; // Apply gravity
+				bpos[5] += bvelocity[5] * delta; // Update position based on velocity
+				starbubble[5].setPosition(bpos[5]);
+				bubblebox[5].setPosition(bpos[5]);
+
+			}
+			if (mermaid.getPosition().x < 500)
+			{
+
+				if (stbcount == 6)
+				{
+
+					bpos[6].y = mermaid.getPosition().y;
+					bpos[6].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[6].y += gravity * delta; // Apply gravity
+				bpos[6] += bvelocity[6] * delta; // Update position based on velocity
+				starbubble[6].setPosition(bpos[6]);
+				bubblebox[6].setPosition(bpos[6]);
+
+			}
+			if (mermaid.getPosition().x < 300)
+			{
+
+				if (stbcount == 7)
+				{
+
+					bpos[7].y = mermaid.getPosition().y;
+					bpos[7].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[7].y += gravity * delta; // Apply gravity
+				bpos[7] += bvelocity[7] * delta; // Update position based on velocity
+
+				starbubble[7].setPosition(bpos[7]);
+				bubblebox[7].setPosition(bpos[7]);
+			}
+			if (mermaid.getPosition().x < 100)
+			{
+
+				if (stbcount == 8)
+				{
+
+					bpos[8].y = mermaid.getPosition().y;
+					bpos[8].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[8].y += gravity * delta; // Apply gravity
+				bpos[8] += bvelocity[8] * delta; // Update position based on velocity
+
+				starbubble[8].setPosition(bpos[8]);
+				bubblebox[8].setPosition(bpos[8]);
+
+			}
+
+
+		}
+
+		if (winner)
+		{
+			for (int i = 0; i < npc1; i++)
+			{
+				smallfish[i].alive = false;
+			}
+			for (int i = 0; i < npc2; i++)
+			{
+				mediumfish[i].alive = false;
+				starfish[i].alive = false;
+			}
+			for (int i = 0; i < npc3; i++)
+			{
+				largefish[i].alive = false;
+			}
+			for (int i = 0; i < npc4; i++)
+			{
+				sharktank[i].alive = false;
+			}
+		}
+
+		// Setting mouth position for yellowfish //
+
+		for (int i = 0; i < npc2; i++)
+		{
+			if (mediumfish[i].image.getScale().x > 0)
+			{
+				mediumfish[i].mouth2.setPosition(mediumfish[i].image.getPosition().x, mediumfish[i].image.getPosition().y + 40);
+			}
+			else
+			{
+				mediumfish[i].mouth2.setPosition(mediumfish[i].image.getPosition().x - 15, mediumfish[i].image.getPosition().y + 40);
+			}
+		}
+
+		// Setting mouth position for lionfish //
+
+		for (int i = 0; i < npc3; i++)
+		{
+			if (largefish[i].image.getScale().x > 0)
+			{
+				largefish[i].mouth2.setPosition(largefish[i].image.getPosition().x + 15, largefish[i].image.getPosition().y + 100);
+			}
+			else
+			{
+				largefish[i].mouth2.setPosition(largefish[i].image.getPosition().x - 15, largefish[i].image.getPosition().y + 100);
+			}
+		}
+
+		// View bounds //
+
+		Vector2f viewCenter = view.getCenter();
+		Vector2f viewSize = view.getSize();
+		Vector2f windowSize(win.getSize());
+		float viewHalfWidth = viewSize.x / 2.0f;
+		float viewHalfHeight = viewSize.y / 2.0f;
+
+		// View collision with screen //
+
+		if (viewCenter.x < 802)
+			view.setCenter(802, view.getCenter().y);
+		if (viewCenter.y >= 641)
+			view.setCenter(view.getCenter().x, 641);
+		if (viewCenter.x >= 1104)
+			view.setCenter(1104, view.getCenter().y);
+		if (viewCenter.y < 469)
+			view.setCenter(view.getCenter().x, 469);
+
+		// View movement //
+
+		if (mc.dead == false && pause == false)
+		{
+			if (mc.image.getPosition().x > view.getSize().x / 2)
+			{
+				view.move(2, 0);
+			}
+			else if (mc.image.getPosition().x < view.getSize().x / 2)
+			{
+				view.move(-2, 0);
+			}
+			if (mc.image.getPosition().y > view.getSize().y / 2)
+			{
+				view.move(0, 2);
+			}
+			else if (mc.image.getPosition().y < view.getSize().y / 2)
+			{
+				view.move(0, -2);
+			}
+		}
+
+		// Scoreboard movement //
+
+		rectangle.setPosition(view.getCenter().x - 800, view.getCenter().y - 450);
+		BarRectangle.setPosition(view.getCenter().x - 704, view.getCenter().y - 372);
+		BarProgress.setPosition(view.getCenter().x - 700, view.getCenter().y - 368);
+		MenuFish1.setPosition(view.getCenter().x - 700, view.getCenter().y - 440);
+		MenuFish2.setPosition(view.getCenter().x - 607, view.getCenter().y - 440);
+		MenuFish3.setPosition(view.getCenter().x - 464, view.getCenter().y - 450);
+		tringle1.setPosition(view.getCenter().x - 650, view.getCenter().y - 368);
+		tringle2.setPosition(view.getCenter().x - 503.9, view.getCenter().y - 368);
+		growth.setPosition(view.getCenter().x - 790, view.getCenter().y - 400);
+		menut.setPosition(view.getCenter().x - 790, view.getCenter().y - 450);
+		scoree.setPosition(view.getCenter().x - 200, view.getCenter().y - 430);
+		scorecount.setPosition(view.getCenter().x - 70, view.getCenter().y - 440);
+		livescount.setPosition(view.getCenter().x + 415, view.getCenter().y - 430);
+		livess.setPosition(view.getCenter().x + 300, view.getCenter().y - 430);
+		rectascore.setPosition(view.getCenter().x - 100, view.getCenter().y - 415);
+		rectalives.setPosition(view.getCenter().x + 400, view.getCenter().y - 405);
+
+
+		// starfish timer //
+
+
+		if (starbubble_timer > 500) {
+			starfish[starbubble_counter].alive = true;
+			starfish[starbubble_counter].image.setTexture(tex10);
+			starfish[starbubble_counter].image.setPosition(rand() % 1920, 1080);
+			starfish[starbubble_counter].speed = -2;
+			starfish[starbubble_counter].image.setScale(1.7, 1.7);
+			starbubble_counter++;
+			starbubble_timer = 0;
+
+		}
+		if (starbubble_timer <= 500)
+			starbubble_timer++;
+
+		if (starbubble_counter > 59)
+		{
+			starbubble_counter = 0;
+		}
+
+		if (bubbletimer > 50)
+		{
+			bubbles[bubblecounter].image.setTexture(tex11);
+			bubbles[bubblecounter].image.setPosition(1900, pos4[bubblecounter]);
+			bubbles[bubblecounter].image.setScale(0.025, 0.025);
+			bubbles[bubblecounter].image.setColor(Color(255, 255, 255, 100));
+			bubbles[bubblecounter].speed = -(rand() % 6) - 1;
+			bubblecounter++;
+			bubbletimer = 0;
+		}
+		if (bubbletimer <= 600) {
+			bubbletimer++;
+		}
+
+		if (bubbles[199].image.getPosition().x < -40)
+		{
+			bubblecounter == 0;
+		}
+
+
+		// Respawn timers for main fish //
+
+		if (minifishspawntimer > 50 && pause == false)
+		{
+			smallfish[minifishcounter].image.setTexture(tex3);
+			smallfish[minifishcounter].image.setTextureRect(IntRect(0, 0, 60.6, 47));
+			smallfish[minifishcounter].alive = true;
+			minirespawn = true;
+			if (minifishcounter % 2 == 0)
+			{
+				smallfish[minifishcounter].image.setPosition(-70, pos1[minifishcounter]);
+				smallfish[minifishcounter].image.setScale(-1, 1);
+				smallfish[minifishcounter].speed = (rand() % 2) + 1;
+			}
+			else
+			{
+				smallfish[minifishcounter].image.setPosition(2000, pos1[minifishcounter]);
+				smallfish[minifishcounter].image.setScale(1, 1);
+				smallfish[minifishcounter].speed = -(rand() % 2) - 1;
+			}
+			minifishcounter++;
+			minifishspawntimer = 0;
+		}
+		if (minifishspawntimer <= 50) {
+			minifishspawntimer++;
+		}
+		if (minifishcounter >= 99)
+		{
+			minifishcounter = 0;
+		}
+		// Respawn timers for yellowfish // 
+
+		if (yellowfishspawntimer > 300 && pause == false)
+		{
+			mediumfish[yellowfishcounter].image.setTexture(tex4);
+			mediumfish[yellowfishcounter].image.setTextureRect(IntRect(0, 0, 167, 101));
+			mediumfish[yellowfishcounter].mouth2.setSize(Vector2f(25, 35));
+			mediumfish[yellowfishcounter].alive = true;
+			yellowrespawn = true;
+			if (yellowfishcounter % 2 == 0)
+			{
+				mediumfish[yellowfishcounter].image.setPosition(-70, pos2[yellowfishcounter]);
+				mediumfish[yellowfishcounter].image.setScale(-1, 1);
+				mediumfish[yellowfishcounter].speed = (rand() % 3) + 1;
+				mediumfish[yellowfishcounter].mouth2.setPosition(mediumfish[yellowfishcounter].image.getPosition().x - 30, mediumfish[yellowfishcounter].image.getPosition().y + 60);
+			}
+			else
+			{
+				mediumfish[yellowfishcounter].image.setPosition(2000, pos2[yellowfishcounter]);
+				mediumfish[yellowfishcounter].image.setScale(1, 1);
+				mediumfish[yellowfishcounter].speed = -(rand() % 3) - 1;
+				mediumfish[yellowfishcounter].mouth2.setPosition(mediumfish[yellowfishcounter].image.getPosition().x - 30, mediumfish[yellowfishcounter].image.getPosition().y + 60);
+			}
+			yellowfishspawntimer = 0;
+			yellowfishcounter++;
+		}
+
+		if (yellowfishspawntimer <= 300) {
+			yellowfishspawntimer++;
+		}
+
+		if (yellowfishcounter >= 59)
+		{
+			yellowfishcounter = 0;
+		}
+
+		// Respaw timer for lionfish // 
+
+		if (lionfishspawntimer > 400 && phase2 == true && pause == false)
+		{
+			largefish[lionfishcounter].image.setTexture(tex5);
+			largefish[lionfishcounter].image.setTextureRect(IntRect(0, 0, 182, 161.2));
+			largefish[lionfishcounter].mouth2.setSize(Vector2f(15, 40));
+			largefish[lionfishcounter].mouth2.setPosition(largefish[lionfishcounter].image.getPosition().x - 30, largefish[lionfishcounter].image.getPosition().y + 60);
+			largefish[lionfishcounter].alive = true;
+			lionrespawn = true;
+			if (lionfishcounter % 2 == 0)
+			{
+				largefish[lionfishcounter].image.setPosition(-70, pos3[lionfishcounter]);
+				largefish[lionfishcounter].image.setScale(-1.3, 1.3);
+				largefish[lionfishcounter].speed = (rand() % 3) + 1;
+			}
+			else
+			{
+				largefish[lionfishcounter].image.setPosition(2000, pos3[lionfishcounter]);
+				largefish[lionfishcounter].image.setScale(1.3, 1.3);
+				largefish[lionfishcounter].speed = -(rand() % 3) - 1;
+			}
+			lionfishspawntimer = 0;
+			lionfishcounter++;
+		}
+		if (lionfishcounter >= 39)
+		{
+			lionfishcounter = 0;
+		}
+		if (lionfishspawntimer <= 400) {
+			lionfishspawntimer++;
+		}
+
+		win.clear();
+		win.setView(view);
+		win.draw(back);
+		for (int i = 0; i < 100; i++)
+		{
+			win.draw(bubbles[i].image);
+		}
+		win.draw(mountain);
+		win.draw(shell);
+		if (drawpearl)
+		{
+			win.draw(pearl);
+		}
+		if (mc.dead == false)
+			win.draw(mc.image);
+		for (int i = 0; i < npc2; i++)
+		{
+			if (starfish[i].alive && lose == false)
+				win.draw(starfish[i].image);
+		}
+		for (int i = 0; i < stop; i += 1)
+		{
+			if (smallfish[i].alive && lose == false && minirespawn)
+				win.draw(smallfish[i].image);
+		}
+		for (int i = 0; i < stop2; i += 1)
+		{
+			if (mediumfish[i].alive && lose == false && yellowrespawn)
+				win.draw(mediumfish[i].image);
+		}
+
+		for (int i = 0; i < stop3; i += 1)
+		{
+			if (largefish[i].alive && phase2 && lose == false && lionrespawn)
+				win.draw(largefish[i].image);
+		}
+
+		for (int i = 0; i < 100; i++) {
+			win.draw(bubbles[i].image);
+		}
+
+		// Lose level // 
+
+		if (lose)
+		{
+			gameover(back, In_game_level);
+		}
+
+		// Pause function // 
+
+		if (winner)
+		{
+			for (int i = 0; i < npc1; i++)
+			{
+				smallfish[i].alive = false;
+			}
+			for (int i = 0; i < npc2; i++)
+			{
+				mediumfish[i].alive = false;
+			}
+			for (int i = 0; i < npc3; i++)
+			{
+				largefish[i].alive = false;
+			}
+		}
+
+		if (pause)  // here 
+		{
+			int xcoor = worldpos.x, ycoor = worldpos.y;
+			pmenu.setScale(0.7, 0.7);
+			resume.setScale(0.7, 0.7);
+			bmenu.setScale(0.7, 0.7);
+			pmenu.setPosition(view.getCenter().x - ((672 / 2) - 62.5), view.getCenter().y - 400);
+			resume.setPosition(view.getCenter().x - ((672 / 2) - 155), view.getCenter().y - 100);
+			bmenu.setPosition(view.getCenter().x - ((672 / 2) - 155), view.getCenter().y + 30);
+			prect.setPosition(resume.getPosition().x + 20, resume.getPosition().y + 20);
+			prect2.setPosition(bmenu.getPosition().x + 20, bmenu.getPosition().y + 20);
+			if (xcoor >= prect.getPosition().x && xcoor <= (prect.getPosition().x + 250) && ycoor >= prect.getPosition().y && ycoor <= (prect.getPosition().y + 90))
+			{
+				resume.setTexture(resumelight);
+				if (continuebuttonhover == 0)
+				{
+					effects[9].play();
+					continuebuttonhover++;
+				}
+			}
+			else
+			{
+				resume.setTexture(resumedark);
+				continuebuttonhover = 0;
+			}
+			if (xcoor >= prect2.getPosition().x && xcoor <= (prect2.getPosition().x + 250) && ycoor >= prect2.getPosition().y && ycoor <= (prect2.getPosition().y + 90))
+			{
+				bmenu.setTexture(backmenulight);
+				if (backmenubuttonhover == 0)
+				{
+					effects[9].play();
+					backmenubuttonhover++;
+				}
+			}
+
+			else
+			{
+				bmenu.setTexture(backmenudark);
+				backmenubuttonhover = 0;
+			}
+
+			if (xcoor >= prect.getPosition().x && xcoor <= (prect.getPosition().x + 250) && ycoor >= prect.getPosition().y && ycoor <= (prect.getPosition().y + 90) && Mouse::isButtonPressed(Mouse::Left))
+			{
+				pause = false;
+			}
+
+			if (xcoor >= prect2.getPosition().x && xcoor <= (prect2.getPosition().x + 250) && ycoor >= prect2.getPosition().y && ycoor <= (prect2.getPosition().y + 90) && Mouse::isButtonPressed(Mouse::Left))
+			{
+				main_menu();
+			}
+
+			win.draw(pmenu);
+			win.draw(resume);
+			win.draw(bmenu);
+		}
+		if (pause == false)
+		{
+			win.draw(rectangle);
+			win.draw(BarRectangle);
+			win.draw(BarProgress);
+			win.draw(MenuFish1);
+			win.draw(MenuFish2);
+			win.draw(MenuFish3);
+			win.draw(tringle1);
+			win.draw(tringle2);
+			win.draw(growth);
+			win.draw(menut);
+			win.draw(scoree);
+			win.draw(livess);
+			win.draw(rectascore);
+			win.draw(rectalives);
+			win.draw(scorecount);
+			win.draw(livescount);
+			if (phase2 == false)
+			{
+				MenuFish2.setColor(Color(0, 0, 0));
+			}
+			else {
+				MenuFish2.setColor(Color(255, 255, 255));
+			}
+
+			if (phase3 == false)
+			{
+				MenuFish3.setColor(Color(0, 0, 0));
+			}
+			else {
+				MenuFish3.setColor(Color(255, 255, 255));
+			}
+		}
+		if (shelltime.getElapsedTime().asSeconds() >= 0 && shelltime.getElapsedTime().asSeconds() < 4 && pause == false && winner == false)
+		{
+			shell.setTextureRect(IntRect(408, 0, 106, 106));
+			if (cnt == 0)
+			{
+				if (rand() % 7 == 2)
+
+				{
+					blackpearl = true;
+					pearl.setTextureRect(IntRect(0, 0, 50, 50));
+
+				}
+				else if (rand() % 7 == 3 || rand() % 7 == 1)
+				{
+					whitepearl = true;
+					pearl.setTextureRect(IntRect(0, 50, 50, 50));
+
+				}
+				else {
+
+					whitepearl = false;
+					blackpearl = false;
+					pearl.setTextureRect(IntRect(0, 0, 0, 0));
+				}
+
+				drawpearl = true;
+				cnt++;
+			}
+		}
+		if (shelltime.getElapsedTime().asSeconds() > 5 && shelltime.getElapsedTime().asSeconds() <= 8 && pause == false && winner == false)
+		{
+			shell.setTextureRect(IntRect(0, 0, 106, 106));
+			shellisopen = false;
+			drawpearl = false;
+		}
+		if (shelltime.getElapsedTime().asSeconds() > 8)
+		{
+			shelltime.restart();
+			cnt = 0;
+
+		}
+		if (mermaidfound)
+		{
+
+			if (mermaidsoundcounter == 0)
+			{
+				effects[13].play();
+				mermaidsoundcounter++;
+			}
+			for (int i = 0; i < 9; i++)
+			{
+				if (starbubbledraw[i])
+					win.draw(starbubble[i]);
+			}
+			win.draw(mermaid);
+		}
+
+		win.display();
+	}
+}
+void settings() {
+
+	struct settingmen
+	{
+		Sprite logo;
+		Sprite buttons[5], chec[5];
+		Text settingstext[5];
+		RectangleShape selectarea[6];
+		Font font;
+
+		void draw(RenderWindow& window) {
+			for (int i = 0; i < 5; i++)
+			{
+				window.draw(buttons[i]);
+				window.draw(settingstext[i]);
+				window.draw(chec[i]);
+			}
+		}
+	}	s11;
+
+	effectsB[9].loadFromFile("./Sounds/mouseOver.mp3");
+	effects[9].setBuffer(effectsB[9]);
+	int checkbuttonhover[5] = {};
+	int backbuttonhover = 0;
+	Font settingsfont;
+	settingsfont.loadFromFile("./Fonts/GILSANUB.TTF");
+	Texture setlog, music, soundeffects, mousespeed, back, check, circledark, circlelight;
+	Mouse mouse;
+	circlelight.loadFromFile("./Images/circlelight.png");
+	check.loadFromFile("./Images/circlechecked.png");
+	circledark.loadFromFile("./Images/circledark.png");
+	s11.font.loadFromFile("./Fonts/All-Genders-Bold-v4.otf");
+	// while ?!//
+
+	// Musicsymbol //
+	music.loadFromFile("./Images/musicsymbol.png");
+	s11.buttons[0].setTexture(music);
+	s11.buttons[0].setPosition(Vector2f((1920 / 2) - 700, (1080 / 4) + 150));
+	s11.settingstext[0].setFont(s11.font);
+	s11.settingstext[0].setFillColor(Color::White);
+	s11.settingstext[0].setString("MUSIC");
+	s11.settingstext[0].setCharacterSize(70);
+	s11.settingstext[0].setPosition(Vector2f((1920 / 2) - 600, (1080 / 4) + 150));
+
+	// Soundeffects button //
+
+	soundeffects.loadFromFile("./Images/SPEAKER.png");
+	s11.buttons[1].setTexture(soundeffects);
+	s11.buttons[1].setPosition(Vector2f((1920 / 2) - 700, (1080 / 4) + 275));
+	s11.settingstext[1].setFont(s11.font);
+	s11.settingstext[1].setFillColor(Color::White);
+	s11.settingstext[1].setString("SOUND EFFECTS");
+	s11.settingstext[1].setCharacterSize(70);
+	s11.settingstext[1].setPosition(Vector2f((1920 / 2) - 600, (1080 / 4) + 275));
+
+	// Mousespeed button //
+
+	mousespeed.loadFromFile("./Images/mousespeed.png");
+	s11.buttons[2].setTexture(mousespeed);
+	s11.buttons[2].setPosition(Vector2f((1920 / 2) - 700, (1080 / 4) + 400));
+	s11.settingstext[2].setFont(s11.font);
+	s11.settingstext[2].setFillColor(Color::White);
+	s11.settingstext[2].setString("MOUSESPEED");
+	s11.settingstext[2].setCharacterSize(70);
+	s11.settingstext[2].setPosition(Vector2f((1920 / 2) - 600, (1080 / 4) + 400));
+
+	// Settings logo //
+
+	setlog.loadFromFile("./Images/SETTINGS SMALL.png");
+	s11.buttons[3].setTexture(setlog);
+	s11.buttons[3].setPosition(Vector2f((1920 / 2) - 750, 200));
+	s11.settingstext[3].setFont(settingsfont);
+	s11.settingstext[3].setFillColor(Color::White);
+	s11.settingstext[3].setString("SETTINGS");
+	s11.settingstext[3].setCharacterSize(90);
+	s11.settingstext[3].setPosition(Vector2f((1920 / 2) - 630, 200));
+
+	// Back button // 
+
+	back.loadFromFile("./Images/Back button.png");
+	s11.buttons[4].setTexture(back);
+	s11.buttons[4].setPosition(Vector2f(1380, 810));
+	s11.settingstext[4].setFont(settingsfont);
+	s11.settingstext[4].setFillColor(Color::White);
+	s11.settingstext[4].setString("BACK");
+	s11.settingstext[4].setCharacterSize(65);
+	s11.settingstext[4].setPosition(Vector2f(1450, 800));
+
+	// Checkboxes // 
+
+	s11.chec[0].setTexture(circledark);
+	s11.chec[0].setPosition(Vector2f((1920 / 2) - 350, (1080 / 4) + 150));
+	s11.chec[1].setTexture(circledark);
+	s11.chec[1].setPosition(Vector2f((1920 / 2) - 10, (1080 / 4) + 275));
+	s11.chec[2].setTexture(circledark);
+	s11.chec[2].setPosition(Vector2f((1920 / 2) + 100, (1080 / 4) + 400));
+	s11.chec[3].setTexture(circledark);
+	s11.chec[3].setPosition(Vector2f((1920 / 2), (1080 / 4) + 400));
+	s11.chec[4].setTexture(circledark);
+	s11.chec[4].setPosition(Vector2f((1920 / 2) - 100, (1080 / 4) + 400));
+
+	Texture mainbg;
+	mainbg.loadFromFile("./Images/settings.png");
+
+	Sprite bg;
+	bg.setTexture(mainbg);
+
+	mainnmusic.setLoop(true);
+	mainnmusic.play();
+	while (win.isOpen())
+	{
+
+		Vector2i mouseposition = { Mouse::getPosition(win).x,Mouse::getPosition(win).y };
+		while (win.pollEvent(ev))
+		{
+			if (ev.type == Event::Closed)
+				win.close();
+			if (mouseposition.x > 610 && mouseposition.x < 685 && mouseposition.y >420 && mouseposition.y < 500)
+			{
+				s11.chec[0].setTexture(circlelight);
+				if (checkbuttonhover[0] == 0)
+				{
+					effects[9].play();
+					checkbuttonhover[0]++;
+				}
+			}
+			else
+			{
+				s11.chec[0].setTexture(circledark);
+				checkbuttonhover[0] = 0;
+			}
+
+			if (mouseposition.x > 950 && mouseposition.x < 1028 && mouseposition.y >543 && mouseposition.y < 625)
+			{
+				s11.chec[1].setTexture(circlelight);
+				if (checkbuttonhover[1] == 0)
+				{
+					effects[9].play();
+					checkbuttonhover[1]++;
+				}
+			}
+			else
+			{
+				s11.chec[1].setTexture(circledark);
+				checkbuttonhover[1] = 0;
+			}
+
+			if (mouseposition.x > 860 && mouseposition.x < 938 && mouseposition.y >668 && mouseposition.y < 748)
+			{
+				s11.chec[4].setTexture(circlelight);
+				if (checkbuttonhover[4] == 0)
+				{
+					effects[9].play();
+					checkbuttonhover[4]++;
+				}
+			}
+			else
+			{
+				s11.chec[4].setTexture(circledark);
+				checkbuttonhover[4] = 0;
+			}
+
+			if (mouseposition.x > 960 && mouseposition.x < 1038 && mouseposition.y >668 && mouseposition.y < 748)
+			{
+				s11.chec[3].setTexture(circlelight);
+				if (checkbuttonhover[3] == 0)
+				{
+					effects[9].play();
+					checkbuttonhover[3]++;
+				}
+			}
+			else
+			{
+				s11.chec[3].setTexture(circledark);
+				checkbuttonhover[3] = 0;
+			}
+
+			if (mouseposition.x > 1060 && mouseposition.x < 1138 && mouseposition.y >668 && mouseposition.y < 748)
+			{
+				s11.chec[2].setTexture(circlelight);
+				if (checkbuttonhover[2] == 0)
+				{
+					effects[9].play();
+					checkbuttonhover[2]++;
+				}
+			}
+			else
+			{
+				s11.chec[2].setTexture(circledark);
+				checkbuttonhover[2] = 0;
+			}
+
+			// Check conditions // 
+
+			if (mouseposition.x > 610 && mouseposition.x < 685 && mouseposition.y >420 && mouseposition.y < 500 && Mouse::isButtonPressed(Mouse::Left))
+			{
+				checkbox[0] = !checkbox[0];
+			}
+
+			if (checkbox[0]) //needs repair 
+
+			{
+				s11.chec[0].setTexture(check);
+				mainnmusic.setVolume(100);
+			}
+			else
+			{
+				mainnmusic.setVolume(0);
+			}
+
+			//sound effects mute / unmute 
+
+			if (mouseposition.x > 950 && mouseposition.x < 1028 && mouseposition.y >543 && mouseposition.y < 625 && Mouse::isButtonPressed(Mouse::Left))
+			{
+				checkbox[1] = !checkbox[1];
+
+			}
+			if (checkbox[1] == false)
+				for (int i = 0; i < numberofsound; i++)
+					effects[i].setVolume(0);
+			if (checkbox[1] == true)
+			{
+				for (int i = 0; i < numberofsound; i++)
+					effects[i].setVolume(100);
+				s11.chec[1].setTexture(check);
+			}
+
+			// Mouse speed conditions //
+
+			checkbox[4] = true;
+			if (mouseposition.x > 1060 && mouseposition.x < 1138 && mouseposition.y >668 && mouseposition.y < 748 && Mouse::isButtonPressed(Mouse::Left))
+			{
+				checkbox[2] = true;
+				dampeningFactor = 0.05f;
+			}
+
+			if (checkbox[2] == true)
+			{
+				s11.chec[2].setTexture(check);
+				checkbox[3] = false;
+				checkbox[4] = false;
+			}
+			if (mouseposition.x > 960 && mouseposition.x < 1038 && mouseposition.y >668 && mouseposition.y < 748 && Mouse::isButtonPressed(Mouse::Left))
+			{
+				checkbox[3] = true;
+				dampeningFactor = 0.07f;
+			}
+
+			if (checkbox[3] == true)
+			{
+				s11.chec[3].setTexture(check);
+				checkbox[2] = false;
+				checkbox[4] = false;
+			}
+			if (mouseposition.x > 860 && mouseposition.x < 938 && mouseposition.y >668 && mouseposition.y < 748 && Mouse::isButtonPressed(Mouse::Left))
+			{
+				checkbox[4] = true;
+				dampeningFactor = 0.01f;
+			}
+
+			if (checkbox[4] == true)
+			{
+				s11.chec[4].setTexture(check);
+				checkbox[2] = false;
+				checkbox[3] = false;
+			}
+			if (mouseposition.x > 1450 && mouseposition.x < 1680 && mouseposition.y >800 && mouseposition.y < 868)
+			{
+				s11.settingstext[4].setFillColor(Color::Yellow);
+				s11.buttons[4].setScale(1.1, 1.1);
+				if (backbuttonhover == 0)
+				{
+					effects[9].play();
+					backbuttonhover++;
+				}
+			}
+			else
+			{
+				s11.settingstext[4].setFillColor(Color::White);
+				s11.buttons[4].setScale(1, 1);
+				backbuttonhover = 0;
+			}
+
+			if (mouseposition.x > 1450 && mouseposition.x < 1680 && mouseposition.y >800 && mouseposition.y < 850 && Mouse::isButtonPressed(Mouse::Left))
+			{
+				main_menu();
+			}
+		}
+		win.clear();
+		win.draw(bg);
+		s11.draw(win);
+		win.display();
+	}
+}
+void stageclear(int targetScore, int miniscore, int yellowscore, int lionscore, Sprite bg, Texture fish1, Texture fish2, Texture fish3)
+{
+
+	//////////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////       INITIALIZATIONS       //////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////
+
+
+// mouse hover sound effect // 
+
+	effectsB[9].loadFromFile("./Sounds/mouseOver.mp3");
+	effects[9].setBuffer(effectsB[9]);
+
+	// Variables //
+
+	int continuebuttonhover = 0;
+	int quitbuttonhover = 0;;
+	int smallfishcounter = 0, mediumfishcounter = 0, largefishcounter = 0;
+	int score = 0;
+	float incrementTime = 0.000005f;
+	float elapsedTime = 0.0f;
+
+	// View //
+
+	View v;
+	v.setSize(1920, 1080);
+	v.setCenter(960, 540);
+
+	// Timers //
+
+	Clock Increment_timer;
+
+	// Loading font //
+
+	Font font;
+	font.loadFromFile("./Fonts/GothamKnightsMidCondense-2OMGv.OTF");
+
+	// Loading textures //
+
+	Texture  tex, tex2, tex3, tex4, tex5;
+	tex.loadFromFile("./Images/stage cleared.png");
+	tex2.loadFromFile("./Images/CONTINUE light.png");
+	tex3.loadFromFile("./Images/CONTINUE dark.png");
+	tex4.loadFromFile("./Images/QUIT dark.png");
+	tex5.loadFromFile("./Images/QUIT light.png");
+
+	// Stageclear sprite modifications //
+
+	Sprite stageclear_frame;
+	stageclear_frame.setTexture(tex);
+	stageclear_frame.setPosition(231, 62);
+
+	// Continue button sprite modifications //
+
+	Sprite continue_button;
+	continue_button.setTexture(tex3);
+	continue_button.setPosition(1100, 700);
+
+	// Quit button sprite modifications //
+
+	Sprite quit_button;
+	quit_button.setTexture(tex4);
+	quit_button.setPosition(400, 700);
+
+	// Small fish sprite modifications //
+
+	Sprite smallfish;
+	smallfish.setTexture(fish1);
+	smallfish.setPosition(600, 500);
+	smallfish.setScale(0.7, 0.7);
+
+	// Medium fish sprite modifications //
+
+	Sprite  mediumfish;
+	mediumfish.setTexture(fish3);
+	mediumfish.setPosition(900, 487);
+	mediumfish.setScale(0.7, 0.7);
+
+	// Large fish sprite modifications //
+
+	Sprite  largefish;
+	largefish.setTexture(fish2);
+	largefish.setPosition(1200, 442);
+	largefish.setScale(0.7, 0.7);
+
+	// "score" text modifications //
+
+	Text scoreText;
+	scoreText.setFont(font);
+	scoreText.setCharacterSize(110);
+	scoreText.setFillColor(sf::Color::White);
+	scoreText.setPosition(850, 310);
+	scoreText.setString("score: " + to_string(score));
+
+	// Small fish counter modifications //
+
+	Text smallfish_text;
+	smallfish_text.setFont(font);
+	smallfish_text.setCharacterSize(70);
+	smallfish_text.setFillColor(sf::Color::White);
+	smallfish_text.setPosition(625, 550);
+	smallfish_text.setString(to_string(smallfishcounter));
+
+	// Medium fish counter modifications //
+
+	Text mediumfish_text;
+	mediumfish_text.setFont(font);
+	mediumfish_text.setCharacterSize(70);
+	mediumfish_text.setFillColor(sf::Color::White);
+	mediumfish_text.setPosition(925, 550);
+	mediumfish_text.setString(to_string(mediumfishcounter));
+
+	// Large fish counter modifications //
+
+	Text largefish_text;
+	largefish_text.setFont(font);
+	largefish_text.setCharacterSize(70);
+	largefish_text.setFillColor(sf::Color::White);
+	largefish_text.setPosition(1225, 550);
+	largefish_text.setString(to_string(largefishcounter));
+
+	// Setting shapes size and positions //
+
+	Vector2f size = { 350, 140 };
+	RectangleShape contrect(size), quitrect(size);
+	contrect.setPosition(1130, 720);
+	quitrect.setPosition(430, 720);
+
+	// Restarting npcfish position before entering the levels //
+
+	npcrestart();
+
+	// Setting cursor visibility //
+
+	win.setMouseCursorVisible(true);
+
+
+
+	//////////////////////////////////////////////////////////////////////
+   ////////////////////       GAME LOOP        //////////////////////////
+  //////////////////////////////////////////////////////////////////////
+
+
+	while (win.isOpen())
+	{
+		while (win.pollEvent(ev))
+		{
+			if (ev.type == Event::Closed)
+				win.close();
+		}
+
+		// Getting mouse position //
+
+
+		int xcoordinates = Mouse::getPosition(win).x, ycoordinates = Mouse::getPosition(win).y;
+
+
+		// Updating deltatime //
+
+
+		float deltaTime = Increment_timer.restart().asSeconds();
+		elapsedTime += deltaTime;
+
+
+		// Increment score if elapsed time reaches the increment time //
+
+
+		if (elapsedTime >= incrementTime && score < targetScore)
+		{
+			score += 5; // Increment score
+			elapsedTime = 0.0f; // Reset elapsed time
+		}
+		if (elapsedTime >= incrementTime && smallfishcounter < miniscore)
+		{
+			smallfishcounter++; // Increment score
+			elapsedTime = 0.0f; // Reset elapsed time
+		}
+		if (elapsedTime >= incrementTime && mediumfishcounter < yellowscore)
+		{
+			mediumfishcounter++; // Increment score
+			elapsedTime = 0.0f; // Reset elapsed time
+		}
+		if (elapsedTime >= incrementTime && largefishcounter < lionscore)
+		{
+			largefishcounter++; // Increment score
+			elapsedTime = 0.0f; // Reset elapsed time
+		}
+
+		if (xcoordinates >= contrect.getPosition().x && xcoordinates <= (contrect.getPosition().x + 350) && ycoordinates >= contrect.getPosition().y && ycoordinates <= (contrect.getPosition().y + 140))
+		{
+			continue_button.setTexture(tex2);
+			if (continuebuttonhover == 0)
+			{
+				effects[9].play();
+				continuebuttonhover++;
+			}
+		}
+		else
+		{
+			continue_button.setTexture(tex3);
+			continuebuttonhover = 0;
+		}
+		if (xcoordinates >= quitrect.getPosition().x && xcoordinates <= (quitrect.getPosition().x + 350) && ycoordinates >= quitrect.getPosition().y && ycoordinates <= (quitrect.getPosition().y + 140))
+		{
+			quit_button.setTexture(tex5);
+			if (quitbuttonhover == 0)
+			{
+				effects[9].play();
+				quitbuttonhover++;
+			}
+		}
+		else
+		{
+			quit_button.setTexture(tex4);
+			quitbuttonhover = 0;
+		}
+		if (xcoordinates >= contrect.getPosition().x && xcoordinates <= (contrect.getPosition().x + 350) && ycoordinates >= contrect.getPosition().y && ycoordinates <= (contrect.getPosition().y + 140) && Mouse::isButtonPressed(Mouse::Left))
+		{
+			if (In_game_level)
+			{
+				//level2();
+				yourname();
+			}
+			else
+			{
+				yourname();
+			}
+		}
+		if (xcoordinates >= quitrect.getPosition().x && xcoordinates <= (quitrect.getPosition().x + 350) && ycoordinates >= quitrect.getPosition().y && ycoordinates <= (quitrect.getPosition().y + 140) && Mouse::isButtonPressed(Mouse::Left))
+		{
+			main_menu();
+		}
+		scoreText.setString("score: " + to_string(score));
+		smallfish_text.setString(to_string(smallfishcounter));
+		mediumfish_text.setString(to_string(mediumfishcounter));
+		largefish_text.setString(to_string(largefishcounter));
+		win.clear();
+		win.draw(bg);
+		win.draw(stageclear_frame);
+		win.draw(continue_button);
+		win.draw(quit_button);
+		win.draw(smallfish);
+		win.draw(largefish);
+		win.draw(mediumfish);
+		win.draw(scoreText);
+		win.draw(smallfish_text);
+		win.draw(mediumfish_text);
+		win.draw(largefish_text);
+		win.setView(v);
+		win.display();
+	}
+
+}
+void gameover(Sprite bg, bool levelchoice)
+{
+
+	///////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////       INITIALIZATIONS       ///////////////////////
+  ///////////////////////////////////////////////////////////////////////////////
+
+
+
+					 // Mouse hover sound effect //
+
+
+	effectsB[9].loadFromFile("./Sounds/mouseOver.mp3");
+	effects[9].setBuffer(effectsB[9]);
+
+
+	// Variables //
+
+
+	int tryagainbuttonhover = 0;
+	int quitbuttonhover = 0;
+
+
+	// View //
+
+
+	View v;
+	v.setSize(1920, 1080);
+	v.setCenter(960, 540);
+
+
+	// Loading textures // 
+
+
+	Texture tex, tex2, tex3, tex4, tex5, tex6;
+	tex.loadFromFile("./Images/OVER_.png");
+	tex2.loadFromFile("./Images/try light.png");
+	tex3.loadFromFile("./Images/try dark.png");
+	tex4.loadFromFile("./Images/QUIT dark.png");
+	tex5.loadFromFile("./Images/QUIT light.png");
+	tex6.loadFromFile("./Images/tombstone.png");
+
+
+	// Sprites //
+
+
+	Sprite gameover_frame, tryagain_button, quit_button, tombstone;
+	gameover_frame.setTexture(tex);
+	gameover_frame.setPosition(231, 62);
+	tryagain_button.setTexture(tex3);
+	tryagain_button.setPosition(1100, 500);
+	quit_button.setTexture(tex4);
+	quit_button.setPosition(400, 500);
+	tombstone.setTexture(tex6);
+	tombstone.setPosition(820, 430);
+
+
+	// Setting shapes positions and size //
+
+
+	Vector2f size = { 350, 140 };
+	RectangleShape contrectangle(size), quitrectangle(size);
+	contrectangle.setPosition(1130, 520);
+	quitrectangle.setPosition(430, 520);
+
+	// Restarting npcfish position before entering the levels //
+
+
+	npcrestart();
+
+
+	// Setting cursor visiblity //
+
+
+	win.setMouseCursorVisible(true);
+
+
+
+	//////////////////////////////////////////////////////////////////////
+   ////////////////////       GAME LOOP        //////////////////////////
+  //////////////////////////////////////////////////////////////////////
+
+
+
+	while (win.isOpen())
+	{
+		while (win.pollEvent(ev))
+		{
+			if (ev.type == Event::Closed)
+				win.close();
+		}
+
+
+		// Getting mouse position //
+
+
+		int xcoordinates = Mouse::getPosition(win).x, ycoordinates = Mouse::getPosition(win).y;
+
+
+
+		///////////////////////////////////////////////////////////////////////
+	   ////////////////////       CONDITIONS        //////////////////////////
+	  ///////////////////////////////////////////////////////////////////////
+
+
+
+
+						// Try again button mouse hover reaction //
+
+
+		if (xcoordinates >= contrectangle.getPosition().x && xcoordinates <= (contrectangle.getPosition().x + 350) && ycoordinates >= contrectangle.getPosition().y && ycoordinates <= (contrectangle.getPosition().y + 140))
+		{
+			tryagain_button.setTexture(tex2);
+			if (tryagainbuttonhover == 0)
+			{
+				effects[9].play();
+				tryagainbuttonhover++;
+			}
+		}
+		else
+		{
+			tryagain_button.setTexture(tex3);
+			tryagainbuttonhover = 0;
+		}
+
+
+		// Quit button mouse hover reaction //
+
+
+		if (xcoordinates >= quitrectangle.getPosition().x && xcoordinates <= (quitrectangle.getPosition().x + 350) && ycoordinates >= quitrectangle.getPosition().y && ycoordinates <= (quitrectangle.getPosition().y + 140))
+		{
+			quit_button.setTexture(tex5);
+			if (quitbuttonhover == 0)
+			{
+				effects[9].play();
+				quitbuttonhover++;
+			}
+		}
+		else
+		{
+			quit_button.setTexture(tex4);
+			quitbuttonhover = 0;
+		}
+
+
+		// Playing again the level when you click the try again button //
+
+
+		if (xcoordinates >= contrectangle.getPosition().x && xcoordinates <= (contrectangle.getPosition().x + 350) && ycoordinates >= contrectangle.getPosition().y && ycoordinates <= (contrectangle.getPosition().y + 140) && Mouse::isButtonPressed(Mouse::Left))
+		{
+			if (levelchoice)
+				level1();
+			else
+				level2();
+		}
+
+
+		// Going back to main menu when you click the quit button //
+
+
+		if (xcoordinates >= quitrectangle.getPosition().x && xcoordinates <= (quitrectangle.getPosition().x + 350) && ycoordinates >= quitrectangle.getPosition().y && ycoordinates <= (quitrectangle.getPosition().y + 140) && Mouse::isButtonPressed(Mouse::Left))
+		{
+			main_menu();
+		}
+
+
+		win.clear();
+		win.draw(bg);
+		win.draw(gameover_frame);
+		win.draw(tombstone);
+		win.draw(tryagain_button);
+		win.draw(quit_button);
+		win.setView(v);
+		win.display();
+	}
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+}
+void npcrestart()
+{
+	///////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////       INITIALIZATIONS       ///////////////////////
+  ///////////////////////////////////////////////////////////////////////////////
+
+
+
+					   // For rand function to work //
+
+
+	srand(time(0));
+
+	// Generating a random number responsible of Setting how many npcfish are going to show up // 
+
+
+	int stop = (rand() % 30) + 70, stop2 = (rand() % 20) + 40, stop3 = (rand() % 10) + 30;
+
+
+	// Setting random positions in y-axis for npcfish //
+
+
+	int  pos1[100] = {}, pos2[100] = { }, pos3[100] = {}, pos4[100] = {}, pos5[100] = {};
+
+
+	// Pushing away undrawen npcfish from the screen //
+
+
+	for (int i = 0; i < 100; i++)
+	{
+		pos1[i] = -500;
+		pos2[i] = -500;
+		pos3[i] = -500;
+		pos4[i] = -500;
+		pos5[i] = -500;
+	}
+
+	// Loading textures  // 
+
+
+	Texture tex, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10, tex11, tex12, tex13, tex14, tex15;
+	tex.loadFromFile("./Images/angelfish.png");
+	tex2.loadFromFile("./Images/game.jpg");
+	tex3.loadFromFile("./Images/minnow.png");
+	tex4.loadFromFile("./Images/yellowfish2.png");
+	tex5.loadFromFile("./Images/lionfish2.png");
+	tex6.loadFromFile("./Images/minnow.png");
+	tex7.loadFromFile("./Images/yellow.png");
+	tex8.loadFromFile("./Images/lion.png");
+	tex9.loadFromFile("./Images/scorebar2.png");
+	tex10.loadFromFile("./Images/PAUSED.png");
+	tex11.loadFromFile("./Images/RESUME_dark.png");
+	tex12.loadFromFile("./Images/RESUME_light.png");
+	tex13.loadFromFile("./Images/MAINMENU_dark.png");
+	tex14.loadFromFile("./Images/MAINMENU_light.png");
+	tex15.loadFromFile("./Images/starbubble.png");
+
+
+
+	// Setting smallfish sprite, positions and speed //
+
+
+	for (int i = 0; i < npc1; i++)
+	{
+		smallfish[i].image.setTexture(tex3);
+		smallfish[i].image.setTextureRect(IntRect(0, 0, 60.6, 47));
+		smallfish[i].alive = true;
+		if (i % 2 == 0)
+		{
+			smallfish[i].image.setPosition(-70, pos1[i]);
+			smallfish[i].image.setScale(-1, 1);
+			smallfish[i].speed = (rand() % 2) + 1;
+		}
+		else
+		{
+			smallfish[i].image.setPosition(2000, pos1[i]);
+			smallfish[i].image.setScale(1, 1);
+			smallfish[i].speed = -(rand() % 2) - 1;
+		}
+	}
+
+
+	// Setting mediumfish sprite, positions and speed //
+
+	for (int i = 0; i < npc2; i++)
+	{
+		mediumfish[i].image.setTexture(tex4);
+		mediumfish[i].image.setTextureRect(IntRect(0, 0, 167, 101));
+		mediumfish[i].mouth2.setSize(Vector2f(25, 35));
+		mediumfish[i].alive = true;
+		if (i % 2 == 0)
+		{
+			mediumfish[i].image.setPosition(-70, pos2[i]);
+			mediumfish[i].image.setScale(-1, 1);
+			mediumfish[i].speed = (rand() % 3) + 1;
+			mediumfish[i].mouth2.setPosition(mediumfish[i].image.getPosition().x - 30, mediumfish[i].image.getPosition().y + 60);
+		}
+		else
+		{
+			mediumfish[i].image.setPosition(2000, pos2[i]);
+			mediumfish[i].image.setScale(1, 1);
+			mediumfish[i].speed = -(rand() % 3) - 1;
+			mediumfish[i].mouth2.setPosition(mediumfish[i].image.getPosition().x - 30, mediumfish[i].image.getPosition().y + 60);
+		}
+	}
+
+	// Setting largefish sprite, positions and speed //
+
+
+	for (int i = 0; i < npc3; i++)
+	{
+		largefish[i].image.setTexture(tex5);
+		largefish[i].image.setTextureRect(IntRect(0, 0, 182, 161.2));
+		largefish[i].mouth2.setSize(Vector2f(30, 30));
+		largefish[i].mouth2.setPosition(largefish[i].image.getPosition().x - 30, largefish[i].image.getPosition().y + 60);
+		largefish[i].alive = true;
+		if (i % 2 == 0)
+		{
+			largefish[i].image.setPosition(-70, pos3[i]);
+			largefish[i].image.setScale(-1, 1);
+			largefish[i].speed = (rand() % 3) + 1;
+		}
+		else
+		{
+			largefish[i].image.setPosition(2000, pos3[i]);
+			largefish[i].image.setScale(1, 1);
+			largefish[i].speed = -(rand() % 3) - 1;
+		}
+	}
+
+	for (int i = 0; i < npc4; i++)
+	{
+		sharktank[i].image.setTexture(tex9);
+		sharktank[i].image.setTextureRect(IntRect(0, 0, 271, 121.3));
+		sharktank[i].alive = true;
+		if (i % 2 == 0)
+		{
+			sharktank[i].image.setPosition(-70, pos4[i]);
+			sharktank[i].image.setScale(-2, 2);
+			sharktank[i].speed = 7;
+		}
+		else
+		{
+			sharktank[i].image.setPosition(2000, pos4[i]);
+			sharktank[i].image.setScale(2, 2);
+			sharktank[i].speed = -7;
+		}
+	}
+	// Setting starbubble sprite, positions and speed //
+
+	for (int i = 0; i < 60; i++) {
+		starfish[i].alive = true;
+		starfish[i].image.setTexture(tex15);
+		starfish[i].image.setPosition(-70, pos5[i]);
+		starfish[i].speed = -2;
+		starfish[i].image.setScale(1.7, 1.7);
+	}
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+}
+void level2()
+{
+	////////////////////////////////////////////////////////
+   //////////////        SOUND EFFECTS      ///////////////
+  ////////////////////////////////////////////////////////
+
+	// reverting to level2 music // 
+
+	mainmusic.loadFromFile("./Music/TRACK4.mp3");
+	mainnmusic.setBuffer(mainmusic);
+	mainnmusic.setLoop(true);
+	mainnmusic.play();
+
+
+	// EATING //
+	In_game_level = false;
+
+	//bite sounds//
+	effectsB[0].loadFromFile("./Sounds/BITE1.mp3");
+	effects[0].setBuffer(effectsB[0]);
+	effectsB[1].loadFromFile("./Sounds/BITE2.mp3");
+	effects[1].setBuffer(effectsB[1]);
+	effectsB[2].loadFromFile("./Sounds/BITE3.mp3");
+	effects[2].setBuffer(effectsB[2]);
+	effectsB[3].loadFromFile("./Sounds/BITE4.mp3");
+	effects[3].setBuffer(effectsB[3]);
+
+	// GrowUp //
+
+	effectsB[4].loadFromFile("./Sounds/playerGrow.mp3");
+	effects[4].setBuffer(effectsB[4]);
+
+	// Player Dead //
+
+	effectsB[5].loadFromFile("./Sounds/playerDie.mp3");
+	effects[5].setBuffer(effectsB[5]);
+
+	// Stage cleared //
+
+	effectsB[6].loadFromFile("./Sounds/stageClear.mp3");
+	effects[6].setBuffer(effectsB[6]);
+
+	// Begin //
+
+	effectsB[7].loadFromFile("./Sounds/stageIntro.mp3");
+	effects[7].setBuffer(effectsB[7]);
+	effects[7].play();
+
+	// oyster eating main fish //
+
+	effectsB[8].loadFromFile("./Sounds/oysterBite.mp3");
+	effects[8].setBuffer(effectsB[8]);
+
+	// mouse hover sound //
+
+	effectsB[9].loadFromFile("./Sounds/mouseOver.mp3");
+	effects[9].setBuffer(effectsB[9]);
+
+	// pearl sound //
+
+	effectsB[10].loadFromFile("./Sounds/oysterPearl.mp3");
+	effects[10].setBuffer(effectsB[10]);
+
+	// starbubble sound // 
+
+	effectsB[12].loadFromFile("./Sounds/starPickup.mp3");
+	effects[12].setBuffer(effectsB[12]);
+
+	// mermaid sound // 
+
+	effectsB[13].loadFromFile("./Sounds/Mermaid.mp3");
+	effects[13].setBuffer(effectsB[13]);
+
+	// shark warn sound //
+
+	effectsB[14].loadFromFile("./Sounds/BarracudaWarn.mp3");
+	effects[14].setBuffer(effectsB[14]);
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+	// Resetting number of lives //
+
+	mc.live = 3;
+
+	// Initialize lifestate // 
+
+	mc.dead = false;
+
+	// Initialize size // 
+
+	mc.scalex = -0.7, mc.scalex2 = 0.7, mc.scaley = 0.7;
+
+	// Cursor visibility //
+
+	win.setMouseCursorVisible(false);
+
+	// Frames //
+
+	win.setFramerateLimit(60);
+
+	// Timers //
+
+	Clock fishanimation, respawn, invincibletimer, mcrespawn, stagecleartimer, eating, lioneating, yelloweating, shelltime, sharktimer, gameovertimer;
+
+	// Vectors, variables and booleans //
+
+	Vector2f s = { 1920, 150 }, s2 = { 20, 1080 };
+	Vector2f velocity(0.f, 0.f);
+
+	Vector2f bvelocity[20];
+	Vector2f bpos[20];
+
+	float gravity = 9.8f, delta = 0.1f;
+	int mc_frame = 0, k = 0, f = 0, d = 0, n, e = 0;
+	scorelevel2 = 0;
+	int smallfishscore = 0, mediumfishscore = 0, largefishscore = 0, soundcounter = 0, stagecounter = 0, gameovercounter = 0;
+	int small_frame = 0, medium_frame = 0, large_frame = 0, shark_frame = 0;
+	int mediumfishrespawntimer = 0;
+	int mediumfishcounter = 0;
+	int largefishtimer = 0;
+	int largefishcounter = 0;
+	int mediumindex = 0;
+	int largeindex = 0;
+	int sharkindex = 0;
+	int cnt = 0;
+	int stbcount = 0;
+	int mcrespawncounter = 0;
+	int mermaidsoundcounter = 0;
+	int mermaidframe = 0;
+	int dangerframe = 0;
+	int sharkspawntimer = 0;
+	int sharkcounter = 0;
+	int resumebuttonhover = 0;
+	int quitbuttonhover = 0;
+	int bubblecounter = 0, bubbletimer = 0;
+	int starbubble_timer = 0, starbubble_counter = 0;
+	bool r, l, phase2 = false, phase3 = false, mcdead = false, invincible = true, lose = false, winner = false, pause = false;
+	bool hit = false, yhit = false, lhit = false, minirespawn = false, yellowrespawn = false, lionrespawn = false, shellisopen = false, drawpearl = false, sharkhit = false, blackpearl = false, whitepearl = false, mermaidfound = false;
+	bool starbubbledraw[9];
+	for (int i = 0; i < 9; i++)
+		starbubbledraw[i] = true;
+	Clock dangertimer, signtimer;
+
+	// View //
+
+	View view;
+	view.setSize(1920 / 1.2f, 1080 / 1.2f);
+	view.setCenter(1920 / 2.f, 1080 / 2.f);
+
+
+	///////////////////////////////////////////////////////
+   ///////////////      TEXTURES     /////////////////////
+  ///////////////////////////////////////////////////////
+
+
+	 // Mainfish and npcfish textures //
+
+	Texture tex, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10, tex11, tex12, dangersign;
+	tex.loadFromFile("./Images/angelfish.png");
+	tex2.loadFromFile("./Images/game2.png");
+	tex3.loadFromFile("./Images/parrotfish.png");
+	tex4.loadFromFile("./Images/tunalvl2.png");
+	tex5.loadFromFile("./Images/johndory.png");
+	tex6.loadFromFile("./Images/oyster.png");
+	tex7.loadFromFile("./Images/pearls.png");
+	tex8.loadFromFile("./Images/mountain2.png");
+	tex9.loadFromFile("./Images/shark.png");
+	tex10.loadFromFile("./Images/bubble1.png");
+	tex11.loadFromFile("./Images/2000.png");
+	tex12.loadFromFile("./Images/starbubble.png");
+
+	// Scorebar textures //
+
+	Texture  menufish1tex1, menufishtex2, menufishtex3, scoreBar;
+	menufish1tex1.loadFromFile("./Images/parrot.png");
+	menufishtex2.loadFromFile("./Images/tun.png");
+	menufishtex3.loadFromFile("./Images/john.png");
+	scoreBar.loadFromFile("./Images/scorebarlvl2.png");
+	dangersign.loadFromFile("./Images/danger sign.png");
+	dangersign.setSmooth(true);
+
+
+	// Pause menu textures //
+
+
+	Texture  pausemenu, resumedark, resumelight, backmenudark, backmenulight;
+	pausemenu.loadFromFile("./Images/PAUSED.png");
+	resumedark.loadFromFile("./Images/RESUME_dark.png");
+	resumelight.loadFromFile("./Images/RESUME_light.png");
+	backmenulight.loadFromFile("./Images/MAINMENU_light.png");
+	backmenudark.loadFromFile("./Images/MAINMENU_dark.png");
+
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+											  ///////////////////////////////////////////////////////
+											 ///////////////      Sprites      /////////////////////
+											///////////////////////////////////////////////////////                        
+
+
+														   // Background sprite //
+
+
+	Sprite back;
+	back.setTexture(tex2);
+
+
+	// Mainfish sprite //
+
+	Sprite pearl, shell, mountain, sign, mermaid, starbubble[9];
+	pearl.setTexture(tex7);
+	pearl.setTextureRect(IntRect(0, 0, 50, 50));
+	pearl.setPosition(385, 865);
+	shell.setTexture(tex6);
+	shell.setScale(1.7, 1.7);
+	shell.setTextureRect(IntRect(0, 0, 106, 106));
+	shell.setPosition(335, 765);
+	mountain.setTexture(tex8);
+	mountain.setScale(1.5, 1.5);
+	mountain.setPosition(0, 900);
+	mc.image.setTexture(tex);
+	mc.image.setOrigin(62.5, 52.5);
+	mc.image.setTextureRect(IntRect(0, 0, 125, 106.5));
+	mc.image.setPosition(300, 300);
+	mc.image.setScale(mc.scalex, mc.scaley);
+
+	// starbubble and mermaid sprites // 
+
+	mermaid.setTexture(tex11);
+	mermaid.setTextureRect(IntRect(0, 0, 301, 102));
+	mermaid.setPosition(1920, 540);
+	for (int i = 0; i < 9; i++)
+		starbubble[i].setTexture(tex12);
+
+
+
+	// Scorebar sprites //
+
+
+	Sprite  MenuFish1, MenuFish2, MenuFish3;
+	MenuFish1.setTexture(menufish1tex1);
+	MenuFish1.setScale(0.35, 0.35);
+	MenuFish2.setTexture(menufishtex2);
+	MenuFish2.setScale(0.55f, 0.55f);
+	MenuFish3.setTexture(menufishtex3);
+	MenuFish3.setScale(0.5f, 0.5f);
+
+
+	// Pause menu sprites // 
+
+
+	Sprite pmenu, resume, bmenu;
+	pmenu.setTexture(pausemenu);
+	resume.setTexture(resumedark);
+	bmenu.setTexture(backmenudark);
+	sign.setTexture(dangersign);
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+												  ///////////////////////////////////////////////////////
+												 ///////////////      SHAPES       /////////////////////
+												///////////////////////////////////////////////////////
+
+
+
+
+	// Scorebar rectangles and triangles //
+
+	RectangleShape rectangle(Vector2f(1920, 150)), BarRectangle(Vector2f(400, 23)), BarProgress(Vector2f(0, 15));
+	CircleShape tringle1(17, 3), tringle2(17, 3), shellcircle(67), bubblebox[9];
+	mc.mouth.setSize(Vector2f(20, 20));
+	rectangle.setTexture(&scoreBar);
+	rectangle.setPosition(0, 0);
+	BarRectangle.setFillColor(Color(0, 0, 0, 130));
+	BarProgress.setFillColor(Color(237, 182, 38));
+	BarRectangle.setPosition(0, 0);
+	BarProgress.setPosition(0, 0);
+	BarRectangle.setTexture(&scoreBar);
+	tringle1.setFillColor(Color(250, 1, 1));
+	tringle1.setPosition(0, 0);
+	tringle2.setFillColor(Color(250, 1, 1));
+	tringle2.setPosition(0, 0);
+	shellcircle.setPosition(350, 790);
+
+	for (int i = 0; i < 9; i++)  //bubbles hit box 
+	{
+		bubblebox[i].setPosition(100, 100);
+		bubblebox[i].setRadius(28.5);
+
+	}
+
+	// Pause menu rectangles //
+
+
+	RectangleShape prect(Vector2f(250, 90)), prect2(Vector2f(250, 90)), rectascore(Vector2f(125, 70)), rectalives(Vector2f(50, 50));
+	rectalives.setFillColor(Color(102, 66, 41, 130));
+	rectascore.setFillColor(Color(102, 66, 41, 130));
+	rectalives.setPosition(0, 0);
+	rectascore.setPosition(0, 0);
+
+
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+														   ////////////////////////////////////////////////////////////////
+														  ///////////////      TEXTS AND FONTS       /////////////////////
+														 ////////////////////////////////////////////////////////////////
+
+
+
+														 // Font loading //
+
+
+	Font grfont;
+	grfont.loadFromFile("./Fonts/GothamKnightsMidCondense-2OMGv.OTF");
+
+
+	// Scorebar texts //
+
+
+	Text growth, menut, livess, scoree, scorecount, livescount;
+	livescount.setFont(grfont);
+	livescount.setPosition(800, 40);
+	livescount.setCharacterSize(75);
+	livescount.setFillColor(Color::White);
+	scorecount.setFont(grfont);
+	scorecount.setPosition(800, 40);
+	scorecount.setCharacterSize(85);
+	scorecount.setFillColor(Color::White);
+	livess.setFont(grfont);
+	livess.setString("LIVES");
+	livess.setPosition(800, 40);
+	livess.setCharacterSize(70);
+	livess.setFillColor(Color(234, 221, 202, 200));
+	scoree.setFont(grfont);
+	scoree.setString("SCORE");
+	scoree.setPosition(800, 40);
+	scoree.setCharacterSize(70);
+	scoree.setFillColor(Color(234, 221, 202, 200));
+	growth.setFont(grfont);
+	growth.setString("GROWTH");
+	growth.setPosition(800, 40);
+	growth.setCharacterSize(50);
+	growth.setFillColor(Color(234, 221, 202, 200));
+	menut.setFont(grfont);
+	menut.setString("MENU");
+	menut.setPosition(800, 40);
+	menut.setCharacterSize(50);
+	menut.setFillColor(Color(234, 221, 202, 200));
+
+
+
+	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+	  // initializing starbubbles launchpoint // 
+
+	for (int i = 0; i < 9; i++)
+	{
+		starbubble[i].setScale(1.5, 1.5);
+		bvelocity[i].x = 5;
+		bvelocity[i].y = -20;
+		bpos[i].x = 100;
+		bpos[i].y = 100;
+	}
+
+	// Random Position for the npcfish //
+
+	int var = rand() % 5;
+	srand(var);
+	int  pos1[100], pos2[100], pos3[100], pos4[100];
+	int stop = (rand() % 30) + 70, stop2 = (rand() % 20) + 40, stop3 = (rand() % 10) + 30;
+	for (int i = 0; i < 100; i++)
+	{
+		pos1[i] = (rand() % 930) + 300;
+		pos2[i] = (rand() % 930) + 300;
+		pos3[i] = (rand() % 930) + 300;
+		pos4[i] = (rand() % 930) + 300;
+	}
+	int minifishspawntimer = 0;
+	int minifishcounter = 0;
+	eating.restart();
+	lioneating.restart();
+	yelloweating.restart();
+	shelltime.restart();
+	signtimer.restart();
+	while (win.isOpen())
+	{
+		// Setting the inviciblity for the mainfish when it respawns //
+
+		if (invincibletimer.getElapsedTime().asSeconds() < 3 && invincible)
+		{
+			mc.image.setColor(Color(255, 255, 255, 150));
+			invincible = true;
+		}
+		else
+		{
+			mc.image.setColor(Color(255, 255, 255, 255));
+			invincibletimer.restart();
+			invincible = false;
+		}
+
+		mouseposition = { Mouse::getPosition(win).x,Mouse::getPosition(win).y };
+		worldpos = win.mapPixelToCoords(mouseposition);
+
+		if (mc.dead && mcrespawncounter == 0)
+		{
+			mcrespawncounter++;
+			mcrespawn.restart();
+		}
+		// Respawning the mainfish after it's death //
+
+		if (mcrespawn.getElapsedTime().asSeconds() >= 3 && mc.dead && mc.live != 0)
+		{
+			mc.image.setPosition(960, 0);
+			mc.dead = false;
+			invincible = true;
+		}
+		if (mc.live == 0)
+		{
+
+			if (gameovercounter == 0)
+			{
+				gameovertimer.restart();
+				gameovercounter++;
+			}
+			if (gameovertimer.getElapsedTime().asSeconds() >= 1)
+			{
+				lose = true;
+				gameovertimer.restart();
+			}
+
+		}
+
+		while (win.pollEvent(ev))
+		{
+			if (ev.type == Event::Closed)
+				win.close();
+			if (Keyboard::isKeyPressed(Keyboard::Escape))
+			{
+				game_select();
+			}
+			if (Keyboard::isKeyPressed(Keyboard::P))
+			{
+				pause = true;
+				win.setMouseCursorVisible(true);
+			}
+			if (pause == false)
+			{
+				win.setMouseCursorVisible(false);
+			}
+		}
+
+		/////////////////////////////////////////////////////
+	   ///////////////       MOVEMENTS      ////////////////
+	  /////////////////////////////////////////////////////
+
+
+
+		Vector2f direction = worldpos - mc.image.getPosition();
+		float distance = sqrt(direction.x * direction.x + direction.y * direction.y);
+
+		// Normalize direction vector //
+
+		if (distance != 0) {
+			direction /= distance;
+		}
+
+		// Apply dampening //
+
+		velocity *= (1 - dampeningFactor);
+
+		// Apply velocity based on distance //
+
+		velocity += direction * (0.001f * distance);
+
+
+		// Mainfish movement //
+
+
+		if (pause == false && mc.dead == false)
+		{
+			mc.image.move(velocity);
+		}
+
+
+		// Right and left direction for mainfish //
+
+
+
+		if (worldpos.x > mc.image.getPosition().x && pause == false)
+		{
+			mc.scalex2 = float(abs(mc.scalex));
+			r = true;
+			l = false;
+			if (phase2 == false && phase3 == false)
+			{
+				mc.mouth.setPosition(mc.image.getPosition().x + 30, mc.image.getPosition().y - 10);
+			}
+			else if (phase2 && phase3 == false)
+			{
+				mc.mouth.setPosition(mc.image.getPosition().x + 40, mc.image.getPosition().y - 10);
+			}
+			else
+			{
+				mc.mouth.setPosition(mc.image.getPosition().x + 50, mc.image.getPosition().y - 10);
+			}
+		}
+		else if (worldpos.x < mc.image.getPosition().x && pause == false)
+		{
+			r = false;
+			l = true;
+			if (phase2 == false && phase3 == false)
+			{
+				mc.mouth.setPosition(mc.image.getPosition().x - 50, mc.image.getPosition().y - 10);
+			}
+			else if (phase2 && phase3 == false)
+			{
+				mc.mouth.setPosition(mc.image.getPosition().x - 65, mc.image.getPosition().y - 10);
+			}
+			else
+			{
+				mc.mouth.setPosition(mc.image.getPosition().x - 80, mc.image.getPosition().y - 10);
+			}
+		}
+		if (r)
+		{
+			mc.image.setScale(mc.scalex, mc.scaley);
+		}
+		else if (l)
+		{
+			mc.image.setScale(mc.scalex2, mc.scaley);
+		}
+
+
+
+		// Minifish movement //
+
+
+		for (int i = 0; i < npc1; i += 1)
+		{
+			if (lose == false && pause == false && minirespawn && smallfish[i].alive)
+				smallfish[i].image.move(smallfish[i].speed, 0);
+		}
+
+
+		// Yellowfish movement //
+
+
+		for (int i = 0; i < npc2; i += 1)
+		{
+			if (lose == false && pause == false && yellowrespawn && mediumfish[i].alive)
+				mediumfish[i].image.move(mediumfish[i].speed, 0);
+		}
+
+
+		// Lionfish movement //
+
+
+		for (int i = 0; i < npc3; i += 1)
+		{
+
+			if (phase2 && lose == false && pause == false && lionrespawn && largefish[i].alive)
+			{
+				largefish[i].image.move(largefish[i].speed, 0);
+			}
+		}
+		for (int i = 0; i < npc4; i++)
+		{
+			if (lose == false && pause == false)
+			{
+				sharktank[i].image.move(sharktank[i].speed, 0);
+			}
+		}
+
+
+		// Bubbles movement //
+
+
+		for (int i = 0; i < 200; i++)
+		{
+			bubbles[i].image.move(bubbles[i].speed, 0);
+		}
+		for (int i = 0; i < npc2; i++)
+		{
+			if (lose == false && pause == false && winner == false)
+				starfish[i].image.move(0, starfish[i].speed);
+		}
+
+
+		///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+																 /////////////////////////////////////////////////////////////////
+																///////////////////	       ANIMATIONS       /////////////////////
+															   /////////////////////////////////////////////////////////////////
+
+
+
+
+
+																				  // Frames incremention //
+
+		if (dangertimer.getElapsedTime().asSeconds() > 0.2)
+		{
+			dangerframe++;
+			dangertimer.restart();
+			dangerframe = dangerframe % 2;
+			sign.setTextureRect(IntRect(dangerframe * 160, 0, 160, 138));
+		}
+		if (fishanimation.getElapsedTime().asSeconds() > 0.1)
+		{
+			mc_frame++;
+			small_frame++;
+			medium_frame++;
+			large_frame++;
+			shark_frame++;
+			mermaidframe++;
+			fishanimation.restart();
+		}
+
+		// Mainfish moving animation //
+
+
+		if (pause == false && hit == false)
+		{
+			mc_frame = mc_frame % 15;
+			mc.image.setTextureRect(IntRect(mc_frame * 126, 212.5, 126, 106.5));
+		}
+
+
+		// Mainfish eating animation after hiting any npcfish //
+
+
+		if (hit)
+		{
+			if (eating.getElapsedTime().asSeconds() > 0.05)
+			{
+
+				k++;
+				k = k % 6;
+				mc.image.setTextureRect(IntRect(126 * k, 0, 126, 106.5));
+				eating.restart();
+			}
+			if (k == 5)
+			{
+				hit = false;
+			}
+		}
+
+		// mermaid moving animation // 
+
+		if (mermaidfound && pause == false)
+		{
+
+			mermaidframe = mermaidframe % 20;
+			mermaid.setTextureRect(IntRect(mermaidframe * 301, 0, 301, 101));
+		}
+
+
+
+
+		// Minifish moving animation //
+
+
+		for (int i = 0; i < npc1 && pause == false; i += 1)
+		{
+			small_frame = small_frame % 14;
+			smallfish[i].image.setTextureRect(IntRect(small_frame * 201.3, 146.3, 201.3, 146.3));
+		}
+
+
+
+		// Yellowfish moving animation //
+
+
+		for (int i = 0; i < npc2 && pause == false && yhit == false; i++)
+		{
+			medium_frame = medium_frame % 15;
+			mediumfish[i].image.setTextureRect(IntRect(medium_frame * 241, 121.3, 241, 121.3));
+		}
+
+
+
+		// Yellowfish eating mainfish animation //
+
+
+
+		if (yhit)
+		{
+			if (yelloweating.getElapsedTime().asSeconds() > 0.1)
+			{
+
+				f++;
+				f = f % 6;
+				mediumfish[mediumindex].image.setTextureRect(IntRect(241 * f, 0, 241, 121.3));
+				if (mediumfish[mediumindex].mouth2.getGlobalBounds().intersects(mc.image.getGlobalBounds()) && mc.dead == false && !phase3 && !phase2)
+				{
+					mc.dead = true;
+					mc.live--;
+					effects[5].play();
+				}
+				yelloweating.restart();
+			}
+			if (f == 5)
+			{
+				yhit = false;
+			}
+		}
+
+
+
+		// Lionfish moving animation //
+
+
+
+		for (int i = 0; i < npc3 && pause == false && lhit == false; i++)
+		{
+			large_frame = large_frame % 15;
+			largefish[i].image.setTextureRect(IntRect(large_frame * 181, 181, 181, 181));
+		}
+
+		//Sharktank Moving Animation //
+
+
+		for (int i = 0; i < 20 && pause == false && sharkhit == false; i++)
+		{
+			shark_frame = shark_frame % 14;
+			sharktank[i].image.setTextureRect(IntRect(shark_frame * 271, 121.3, 271, 121.3));
+		}
+
+
+		// Lionfish eating mainfish animation //
+
+
+		if (lhit)
+		{
+			if (lioneating.getElapsedTime().asSeconds() > 0.1)
+			{
+				d++;
+				d = d % 6;
+				largefish[largeindex].image.setTextureRect(IntRect(d * 181, 0, 181, 181));
+				if (largefish[largeindex].mouth2.getGlobalBounds().intersects(mc.image.getGlobalBounds()) && mc.dead == false && !phase3)
+				{
+					mc.dead = true;
+					mc.live--;
+					effects[5].play();
+				}
+				lioneating.restart();
+			}
+			if (d == 5)
+			{
+				lhit = false;
+			}
+		}
+
+		if (sharkhit)
+		{
+			if (sharktimer.getElapsedTime().asSeconds() > 0.1)
+			{
+				e++;
+				e = e % 6;
+				sharktank[sharkindex].image.setTextureRect(IntRect(e * 271, 0, 271, 121));
+				if (sharktank[sharkindex].mouth2.getGlobalBounds().intersects(mc.image.getGlobalBounds()) && mc.dead == false)
+				{
+					mc.dead = true;
+					mc.live--;
+					effects[5].play();
+					effects[3].play();
+				}
+				sharktimer.restart();
+			}
+			if (e == 5)
+			{
+				sharkhit = false;
+			}
+		}
+
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+													   ////////////////////////////////////////////////////////
+													  ///////////////        COLLISIONS       ////////////////
+													 ////////////////////////////////////////////////////////
+
+
+
+
+	   // Mainfish eating minifish //
+
+
+		for (int i = 0; i < stop; i += 1)
+		{
+			if (mc.mouth.getGlobalBounds().intersects(smallfish[i].image.getGlobalBounds()) && smallfish[i].alive && mcdead == false && lose == false)
+			{
+				hit = true;
+				smallfish[i].alive = false;
+				scorelevel2 += 10;
+				BarProgress.setSize(Vector2f(BarProgress.getSize().x + 6.7, BarProgress.getSize().y));
+				effects[0].play();
+				smallfishscore++;
+			}
+		}
+
+
+		for (int i = 0; i < npc2; i++)
+		{
+			if (mc.mouth.getGlobalBounds().intersects(starfish[i].image.getGlobalBounds()) && starfish[i].alive && mcdead == false && lose == false && winner == false)
+			{
+				hit = true;
+				starfish[i].alive = false;
+				scorelevel2 += 40;
+				effects[0].play();
+				effects[12].play();
+			}
+		}
+		for (int i = 0; i < npc2; i++)
+		{
+			for (int j = 0; j < npc1; j++)
+			{
+				if (mediumfish[i].mouth2.getGlobalBounds().intersects(smallfish[j].image.getGlobalBounds()) && pause == false && smallfish[j].alive && mediumfish[i].alive && lose == false)
+				{
+					yhit = true;
+					smallfish[j].alive = false;
+					mediumindex = i;
+				}
+			}
+		}
+
+
+		for (int i = 0; i < npc3; i++)
+		{
+			for (int j = 0; j < npc1; j++)
+			{
+				if (largefish[i].mouth2.getGlobalBounds().intersects(smallfish[j].image.getGlobalBounds()) && pause == false && smallfish[j].alive && largefish[i].alive && lose == false)
+				{
+					lhit = true;
+					smallfish[j].alive = false;
+					largeindex = i;
+				}
+			}
+		}
+
+
+		for (int i = 0; i < npc3; i++)
+		{
+			for (int j = 0; j < npc2; j++)
+			{
+				if (largefish[i].mouth2.getGlobalBounds().intersects(mediumfish[j].image.getGlobalBounds()) && pause == false && mediumfish[j].alive && largefish[i].alive && lose == false)
+				{
+					lhit = true;
+					mediumfish[j].alive = false;
+					largeindex = i;
+				}
+			}
+		}
+
+		// shell collision //
+
+		if (mc.image.getGlobalBounds().intersects(shellcircle.getGlobalBounds()) && shellisopen == false && shelltime.getElapsedTime().asSeconds() > 4.95 && shelltime.getElapsedTime().asSeconds() < 5 && winner == false && pause == false)
+		{
+			mc.dead = true;
+			mc.live--;
+			shellisopen = true;
+			effects[8].play();
+			effects[5].play();
+		}
+
+		if (mc.image.getGlobalBounds().intersects(pearl.getGlobalBounds()) && drawpearl && whitepearl)
+		{
+			hit = true;
+			drawpearl = false;
+			scorelevel2 += 150;
+			BarProgress.setSize(Vector2f(BarProgress.getSize().x + 30, BarProgress.getSize().y));
+			effects[10].play();
+			whitepearl = false;
+		}
+		if (mc.image.getGlobalBounds().intersects(pearl.getGlobalBounds()) && drawpearl && blackpearl && !phase2 && !phase3)
+		{
+			hit = true;
+			drawpearl = false;
+			scorelevel2 += 300;
+			BarProgress.setSize(Vector2f(67.5, BarProgress.getSize().y)); // ???
+			effects[10].play();
+			blackpearl = false;
+		}
+		if (mc.image.getGlobalBounds().intersects(pearl.getGlobalBounds()) && drawpearl && blackpearl && phase2 && !phase3)
+		{
+			hit = true;
+			drawpearl = false;
+			scorelevel2 += 300;
+			BarProgress.setSize(Vector2f(213.5, BarProgress.getSize().y));
+			effects[10].play();
+			blackpearl = false;
+		}
+		else if (mc.image.getGlobalBounds().intersects(pearl.getGlobalBounds()) && drawpearl && blackpearl && phase3)
+
+		{
+			hit = true;
+			drawpearl = false;
+			scorelevel2 += 300;
+			BarProgress.setSize(Vector2f(392.5, BarProgress.getSize().y));
+			effects[10].play();
+			blackpearl = false;
+		}
+		// Collision of main fish with the scoreboard // 
+
+		if (mc.image.getGlobalBounds().intersects(rectangle.getGlobalBounds()))
+		{
+			mc.image.setPosition(mc.image.getPosition().x, rectangle.getPosition().y + 185);
+		}
+		if (mc.image.getGlobalBounds().intersects(rectangle.getGlobalBounds()) && phase2)
+		{
+			mc.image.setPosition(mc.image.getPosition().x, rectangle.getPosition().y + 210);
+		}
+		if (mc.image.getGlobalBounds().intersects(rectangle.getGlobalBounds()) && phase3)
+		{
+			mc.image.setPosition(mc.image.getPosition().x, rectangle.getPosition().y + 230);
+		}
+
+		// Mainfish eating minifish // 
+
+
+		// Mainfish eating yellowfish // 
+
+		for (int i = 0; i < stop2; i += 1)
+		{
+			if (mc.mouth.getGlobalBounds().intersects(mediumfish[i].image.getGlobalBounds()) && phase2 && mediumfish[i].alive && mcdead == false && lose == false)
+			{
+				hit = true;
+				mediumfish[i].alive = false;
+				scorelevel2 += 20;
+				BarProgress.setSize(Vector2f(BarProgress.getSize().x + 13.4, BarProgress.getSize().y));
+				mediumfishscore++;
+				effects[1].play();
+			}
+
+		}
+
+
+		// Mainfish eating lionfish //
+
+		for (int i = 0; i < npc3; i += 1)
+		{
+			if (mc.mouth.getGlobalBounds().intersects(largefish[i].image.getGlobalBounds()) && phase3 && largefish[i].alive && mcdead == false && lose == false)
+			{
+				hit = true;
+				largefish[i].alive = false;
+				scorelevel2 += 30;
+				BarProgress.setSize(Vector2f(BarProgress.getSize().x + 20.1, BarProgress.getSize().y));
+				largefishscore++;
+				effects[2].play();
+			}
+		}
+
+		// Shark eating mainfish //
+
+		for (int i = 0; i < npc4; i++)
+		{
+			if (sharktank[i].mouth2.getGlobalBounds().intersects(mc.image.getGlobalBounds()) && mcdead == false && lose == false && sharktank[i].alive)
+			{
+				sharkhit = true;
+				sharkindex = i;
+			}
+		}
+
+		for (int i = 0; i < npc4; i++)
+		{
+			for (int j = 0; j < stop; j++)
+			{
+				if (sharktank[i].mouth2.getGlobalBounds().intersects(smallfish[j].image.getGlobalBounds()) && pause == false && smallfish[j].alive && lose == false && sharktank[i].alive)
+				{
+					sharkhit = true;
+					sharkindex = i;
+					smallfish[j].alive = false;
+				}
+			}
+		}
+		for (int i = 0; i < npc4; i++)
+		{
+			for (int j = 0; j < npc2; j++)
+			{
+				if (sharktank[i].mouth2.getGlobalBounds().intersects(mediumfish[j].image.getGlobalBounds()) && pause == false && mediumfish[j].alive && lose == false && sharktank[i].alive)
+				{
+					sharkhit = true;
+					sharkindex = i;
+					mediumfish[j].alive = false;
+				}
+			}
+		}
+		for (int i = 0; i < 20; i++)
+		{
+			for (int j = 0; j < npc3; j++)
+			{
+				if (sharktank[i].mouth2.getGlobalBounds().intersects(largefish[j].image.getGlobalBounds()) && pause == false && largefish[j].alive && lose == false && sharktank[i].alive)
+				{
+					sharkhit = true;
+					sharkindex = i;
+					largefish[j].alive = false;
+				}
+			}
+		}
+		// Mainfish eating starbubbles (mermaid) // 
+
+		for (int i = 0; i < 9; i++)
+		{
+			if (mc.mouth.getGlobalBounds().intersects(bubblebox[i].getGlobalBounds()) && mcdead == false && lose == false && starbubbledraw[i])
+			{
+				hit = true;
+				starbubbledraw[i] = false;
+				scorelevel2 += 40;
+				effects[0].play();
+				effects[12].play();
+			}
+		}
+
+		// Phase 2 for mainfish //
+
+		if (BarProgress.getSize().x >= 66)
+		{
+			mc.scalex2 = 1.2;
+			mc.scalex = -1.2;
+			mc.scaley = 1.2;
+			phase2 = true;
+			if (soundcounter == 0)
+			{
+
+				effects[4].play();
+				soundcounter++;
+			}
+		}
+
+		// Phase 3 for mainfish //
+
+		if (BarProgress.getSize().x >= 211)
+		{
+			mc.scalex2 = 1.6;
+			mc.scalex = -1.6;
+			mc.scaley = 1.6;
+			phase3 = true;
+			if (soundcounter == 1)
+			{
+
+				effects[4].play();
+				soundcounter++;
+			}
+
+		}
+
+		// Yellowfish eating mainfish //
+
+		for (int i = 0; i < npc2 && phase2 == false && mc.dead == false && mediumfish[i].alive && invincible == false; i++)
+		{
+			for (int j = 0; j < npc2 && mediumfish[i].mouth2.getGlobalBounds().intersects(mc.image.getGlobalBounds()); j++)
+			{
+				yhit = true;
+				mediumindex = i;
+			}
+		}
+
+
+		// Lionfish eating mainfish //
+
+		for (int i = 0; i < stop3 && phase2 && phase3 == false && mc.dead == false && largefish[i].alive && invincible == false; i++)
+		{
+			for (int j = 0; j < stop3 && largefish[i].mouth2.getGlobalBounds().intersects(mc.image.getGlobalBounds()); j++)
+			{
+				lhit = true;
+				largeindex = i;
+			}
+		}
+
+		// Updating score counter // 
+
+		scorecount.setString(to_string(scorelevel2));
+		livescount.setString(to_string(mc.live));
+
+		// Restarting Growth Bar // 
+
+		if (mc.dead == true && phase2 == false && phase3 == false)
+		{
+			BarProgress.setSize(Vector2f(0.0, BarProgress.getSize().y));
+		}
+		if (mc.dead && phase2 && phase3 == false)
+		{
+
+			BarProgress.setSize(Vector2f(67.5, BarProgress.getSize().y));
+		}
+		if (mc.dead && phase3)
+		{
+
+			BarProgress.setSize(Vector2f(213.5, BarProgress.getSize().y));
+		}
+
+		// Level done //
+
+
+		if (BarProgress.getSize().x >= 391) // 391
+		{
+			winner = true;
+			mermaidfound = true;
+			BarProgress.setSize(Vector2f(391, BarProgress.getSize().y));
+			if (stagecounter == 0)
+			{
+				stagecleartimer.restart();
+				stagecounter++;
+			}
+			if (stagecleartimer.getElapsedTime().asSeconds() >= 1)
+			{
+				stagecleartimer.restart();
+			}
+		}
+		if (mermaid.getPosition().x < -310)
+		{
+			effects[6].play();
+			stageclear(scorelevel2, smallfishscore, mediumfishscore, largefishscore, back, menufish1tex1, menufishtex3, menufishtex2);
+		}
+		if (mermaidfound && pause == false)
+		{
+			mermaid.move(-3, 0);
+
+			if (mermaid.getPosition().x < 1700)
+			{
+
+				if (stbcount == 0)
+				{
+					bpos[0].y = mermaid.getPosition().y;
+					bpos[0].x = mermaid.getPosition().x + 60;
+
+					stbcount++;
+				}
+
+				bvelocity[0].y += gravity * delta; // Apply gravity
+				bpos[0] += bvelocity[0] * delta; // Update position based on velocity
+
+				starbubble[0].setPosition(bpos[0]);
+				bubblebox[0].setPosition(bpos[0]);
+			}
+			if (mermaid.getPosition().x < 1500)
+			{
+
+				if (stbcount == 1)
+				{
+
+					bpos[1].y = mermaid.getPosition().y;
+					bpos[1].x = mermaid.getPosition().x + 60;
+
+					stbcount++;
+				}
+
+				bvelocity[1].y += gravity * delta; // Apply gravity
+				bpos[1] += bvelocity[1] * delta; // Update position based on velocity
+
+				starbubble[1].setPosition(bpos[1]);
+				bubblebox[1].setPosition(bpos[1]);
+			}
+			if (mermaid.getPosition().x < 1300)
+			{
+
+				if (stbcount == 2)
+				{
+
+					bpos[2].y = mermaid.getPosition().y;
+					bpos[2].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[2].y += gravity * delta; // Apply gravity
+				bpos[2] += bvelocity[2] * delta; // Update position based on velocity
+
+				starbubble[2].setPosition(bpos[2]);
+				bubblebox[2].setPosition(bpos[2]);
+			}
+			if (mermaid.getPosition().x < 1100)
+			{
+
+				if (stbcount == 3)
+				{
+
+					bpos[3].y = mermaid.getPosition().y;
+					bpos[3].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[3].y += gravity * delta; // Apply gravity
+				bpos[3] += bvelocity[3] * delta; // Update position based on velocity
+				starbubble[3].setPosition(bpos[3]);
+				bubblebox[3].setPosition(bpos[3]);
+
+			}
+			if (mermaid.getPosition().x < 900)
+			{
+
+				if (stbcount == 4)
+				{
+
+					bpos[4].y = mermaid.getPosition().y;
+					bpos[4].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[4].y += gravity * delta; // Apply gravity
+				bpos[4] += bvelocity[4] * delta; // Update position based on velocity
+				starbubble[4].setPosition(bpos[4]);
+				bubblebox[4].setPosition(bpos[4]);
+
+			}
+			if (mermaid.getPosition().x < 700)
+			{
+
+				if (stbcount == 5)
+				{
+
+					bpos[5].y = mermaid.getPosition().y;
+					bpos[5].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[5].y += gravity * delta; // Apply gravity
+				bpos[5] += bvelocity[5] * delta; // Update position based on velocity
+				starbubble[5].setPosition(bpos[5]);
+				bubblebox[5].setPosition(bpos[5]);
+
+			}
+			if (mermaid.getPosition().x < 500)
+			{
+
+				if (stbcount == 6)
+				{
+
+					bpos[6].y = mermaid.getPosition().y;
+					bpos[6].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[6].y += gravity * delta; // Apply gravity
+				bpos[6] += bvelocity[6] * delta; // Update position based on velocity
+				starbubble[6].setPosition(bpos[6]);
+				bubblebox[6].setPosition(bpos[6]);
+
+			}
+			if (mermaid.getPosition().x < 300)
+			{
+
+				if (stbcount == 7)
+				{
+
+					bpos[7].y = mermaid.getPosition().y;
+					bpos[7].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[7].y += gravity * delta; // Apply gravity
+				bpos[7] += bvelocity[7] * delta; // Update position based on velocity
+
+				starbubble[7].setPosition(bpos[7]);
+				bubblebox[7].setPosition(bpos[7]);
+			}
+			if (mermaid.getPosition().x < 100)
+			{
+
+				if (stbcount == 8)
+				{
+
+					bpos[8].y = mermaid.getPosition().y;
+					bpos[8].x = mermaid.getPosition().x + 60;
+
+
+					stbcount++;
+				}
+
+				bvelocity[8].y += gravity * delta; // Apply gravity
+				bpos[8] += bvelocity[8] * delta; // Update position based on velocity
+
+				starbubble[8].setPosition(bpos[8]);
+				bubblebox[8].setPosition(bpos[8]);
+
+			}
+
+
+		}
+
+
+		// Setting mouth position for yellowfish //
+
+		for (int i = 0; i < npc2; i++)
+		{
+			if (mediumfish[i].image.getScale().x > 0)
+			{
+				mediumfish[i].mouth2.setPosition(mediumfish[i].image.getPosition().x - 5, mediumfish[i].image.getPosition().y + 50);
+			}
+			else
+			{
+				mediumfish[i].mouth2.setPosition(mediumfish[i].image.getPosition().x - 30, mediumfish[i].image.getPosition().y + 50);
+			}
+		}
+
+		// Setting mouth position for lionfish //
+
+		for (int i = 0; i < npc3; i++)
+		{
+			if (largefish[i].image.getScale().x > 0)
+			{
+				largefish[i].mouth2.setPosition(largefish[i].image.getPosition().x, largefish[i].image.getPosition().y + 135);
+			}
+			else
+			{
+				largefish[i].mouth2.setPosition(largefish[i].image.getPosition().x - 40, largefish[i].image.getPosition().y + 135);
+			}
+		}
+
+		if (winner)
+		{
+			for (int i = 0; i < npc1; i++)
+			{
+				smallfish[i].alive = false;
+			}
+			for (int i = 0; i < npc2; i++)
+			{
+				starfish[i].alive = false;
+				mediumfish[i].alive = false;
+			}
+			for (int i = 0; i < npc3; i++)
+			{
+				largefish[i].alive = false;
+			}
+			for (int i = 0; i < npc4; i++)
+			{
+				sharktank[i].alive = false;
+			}
+		}
+
+		// View bounds //
+
+		Vector2f viewCenter = view.getCenter();
+		Vector2f viewSize = view.getSize();
+		Vector2f windowSize(win.getSize());
+		float viewHalfWidth = viewSize.x / 2.0f;
+		float viewHalfHeight = viewSize.y / 2.0f;
+
+		// View collision with screen //
+
+		if (viewCenter.x < 802)
+			view.setCenter(802, view.getCenter().y);
+		if (viewCenter.y >= 641)
+			view.setCenter(view.getCenter().x, 641);
+		if (viewCenter.x >= 1104)
+			view.setCenter(1104, view.getCenter().y);
+		if (viewCenter.y < 469)
+			view.setCenter(view.getCenter().x, 469);
+
+		// View movement //
+
+		if (mc.dead == false && pause == false)
+		{
+			if (mc.image.getPosition().x > view.getSize().x / 2)
+			{
+				view.move(2, 0);
+			}
+			else if (mc.image.getPosition().x < view.getSize().x / 2)
+			{
+				view.move(-2, 0);
+			}
+			if (mc.image.getPosition().y > view.getSize().y / 2)
+			{
+				view.move(0, 2);
+			}
+			else if (mc.image.getPosition().y < view.getSize().y / 2)
+			{
+				view.move(0, -2);
+			}
+		}
+
+		if (phase2 == false)
+		{
+			MenuFish2.setColor(Color(0, 0, 0));
+		}
+		else {
+			MenuFish2.setColor(Color(255, 255, 255));
+		}
+
+		if (phase3 == false)
+		{
+			MenuFish3.setColor(Color(0, 0, 0));
+		}
+		else {
+			MenuFish3.setColor(Color(255, 255, 255));
+		}
+
+
+		for (int i = 0; i < 20; i++)
+		{
+			sharktank[i].mouth2.setSize(Vector2f(40, 60));
+			if (sharktank[i].image.getScale().x > 0)
+			{
+				sharktank[i].mouth2.setPosition(sharktank[i].image.getPosition().x, sharktank[i].image.getPosition().y + 90);
+			}
+			else
+			{
+				sharktank[i].mouth2.setPosition(sharktank[i].image.getPosition().x - 45, sharktank[i].image.getPosition().y + 90);
+			}
+		}
+		// Scoreboard movement //
+
+		rectangle.setPosition(view.getCenter().x - 800, view.getCenter().y - 450);
+		BarRectangle.setPosition(view.getCenter().x - 704, view.getCenter().y - 372);
+		BarProgress.setPosition(view.getCenter().x - 700, view.getCenter().y - 368);
+		MenuFish1.setPosition(view.getCenter().x - 700, view.getCenter().y - 430);
+		MenuFish2.setPosition(view.getCenter().x - 607, view.getCenter().y - 440);
+		MenuFish3.setPosition(view.getCenter().x - 464, view.getCenter().y - 460);
+		tringle1.setPosition(view.getCenter().x - 650, view.getCenter().y - 368);
+		tringle2.setPosition(view.getCenter().x - 503.9, view.getCenter().y - 368);
+		growth.setPosition(view.getCenter().x - 790, view.getCenter().y - 400);
+		menut.setPosition(view.getCenter().x - 790, view.getCenter().y - 450);
+		scoree.setPosition(view.getCenter().x - 200, view.getCenter().y - 430);
+		scorecount.setPosition(view.getCenter().x - 70, view.getCenter().y - 440);
+		livescount.setPosition(view.getCenter().x + 415, view.getCenter().y - 430);
+		livess.setPosition(view.getCenter().x + 300, view.getCenter().y - 430);
+		rectascore.setPosition(view.getCenter().x - 100, view.getCenter().y - 415);
+		rectalives.setPosition(view.getCenter().x + 400, view.getCenter().y - 405);
+
+
+
+		// Respawn timer for bubbles //
+
+
+		if (bubbletimer > 50)
+		{
+			bubbles[bubblecounter].image.setTexture(tex10);
+			bubbles[bubblecounter].image.setPosition(1900, pos4[bubblecounter]);
+			bubbles[bubblecounter].image.setScale(0.025, 0.025);
+			bubbles[bubblecounter].image.setColor(Color(255, 255, 255, 100));
+			bubbles[bubblecounter].speed = -(rand() % 6) - 1;
+			bubblecounter++;
+			bubbletimer = 0;
+		}
+		if (bubbletimer <= 600) {
+			bubbletimer++;
+		}
+
+		if (bubbles[199].image.getPosition().x < -40)
+		{
+			bubblecounter == 0;
+		}
+
+
+		// Respawn timers for main fish //
+
+		if (minifishspawntimer > 100 && pause == false)
+		{
+			smallfish[minifishcounter].image.setTexture(tex3);
+			smallfish[minifishcounter].image.setTextureRect(IntRect(0, 0, 60.6, 47));
+			smallfish[minifishcounter].alive = true;
+			minirespawn = true;
+			if (minifishcounter % 2 == 0)
+			{
+				smallfish[minifishcounter].image.setPosition(-70, pos1[minifishcounter]);
+				smallfish[minifishcounter].image.setScale(-0.4, 0.4);
+				smallfish[minifishcounter].speed = (rand() % 2) + 1;
+			}
+			else
+			{
+				smallfish[minifishcounter].image.setPosition(2000, pos1[minifishcounter]);
+				smallfish[minifishcounter].image.setScale(0.4, 0.4);
+				smallfish[minifishcounter].speed = -(rand() % 2) - 1;
+			}
+			minifishcounter++;
+			minifishspawntimer = 0;
+		}
+		if (minifishspawntimer <= 100)
+			minifishspawntimer++;
+		if (minifishcounter >= 99)
+		{
+			minifishcounter = 0;
+		}
+		// Respawn timers for yellowfish // 
+
+		if (mediumfishrespawntimer > 300 && pause == false)
+		{
+			mediumfish[mediumfishcounter].image.setTexture(tex4);
+			mediumfish[mediumfishcounter].image.setTextureRect(IntRect(0, 0, 167, 101));
+			mediumfish[mediumfishcounter].mouth2.setSize(Vector2f(25, 35));
+			mediumfish[mediumfishcounter].alive = true;
+			yellowrespawn = true;
+			if (mediumfishcounter % 2 == 0)
+			{
+				mediumfish[mediumfishcounter].image.setPosition(-70, pos2[mediumfishcounter]);
+				mediumfish[mediumfishcounter].image.setScale(-1, 1);
+				mediumfish[mediumfishcounter].speed = (rand() % 3) + 1;
+				mediumfish[mediumfishcounter].mouth2.setPosition(mediumfish[mediumfishcounter].image.getPosition().x - 20, mediumfish[mediumfishcounter].image.getPosition().y + 50);
+			}
+			else
+			{
+				mediumfish[mediumfishcounter].image.setPosition(2000, pos2[mediumfishcounter]);
+				mediumfish[mediumfishcounter].image.setScale(1, 1);
+				mediumfish[mediumfishcounter].speed = -(rand() % 3) - 1;
+				mediumfish[mediumfishcounter].mouth2.setPosition(mediumfish[mediumfishcounter].image.getPosition().x - 15, mediumfish[mediumfishcounter].image.getPosition().y + 50);
+			}
+			mediumfishrespawntimer = 0;
+			mediumfishcounter++;
+		}
+		if (mediumfishrespawntimer <= 300)
+			mediumfishrespawntimer++;
+		if (mediumfishcounter >= 59)
+		{
+			mediumfishcounter = 0;
+		}
+
+		// Respaw timer for lionfish // 
+
+		if (largefishtimer > 400 && phase2 == true && pause == false)
+		{
+			largefish[largefishcounter].image.setTexture(tex5);
+			largefish[largefishcounter].image.setTextureRect(IntRect(0, 0, 182, 161.2));
+			largefish[largefishcounter].mouth2.setSize(Vector2f(40, 40));
+			largefish[largefishcounter].mouth2.setPosition(largefish[largefishcounter].image.getPosition().x - 30, largefish[largefishcounter].image.getPosition().y + 60);
+			largefish[largefishcounter].alive = true;
+			lionrespawn = true;
+			if (largefishcounter % 2 == 0)
+			{
+				largefish[largefishcounter].image.setPosition(-70, pos3[largefishcounter]);
+				largefish[largefishcounter].image.setScale(-1.5, 1.5);
+				largefish[largefishcounter].speed = (rand() % 3) + 1;
+			}
+			else
+			{
+				largefish[largefishcounter].image.setPosition(2000, pos3[largefishcounter]);
+				largefish[largefishcounter].image.setScale(1.5, 1.5);
+				largefish[largefishcounter].speed = -(rand() % 3) - 1;
+			}
+			largefishtimer = 0;
+			largefishcounter++;
+		}
+		if (largefishtimer <= 400)
+			largefishtimer++;
+		if (largefishcounter >= 39)
+		{
+			largefishcounter = 0;
+		}
+		if (sharkspawntimer > 1000 && pause == false)
+		{
+			effects[14].play();
+			sharktank[sharkcounter].image.setTexture(tex9);
+			sharktank[sharkcounter].image.setTextureRect(IntRect(0, 0, 271, 121.3));
+			sharktank[sharkcounter].alive = true;
+			if (sharkcounter % 2 == 0)
+			{
+				sharktank[sharkcounter].image.setPosition(-70, mc.image.getPosition().y - 100);
+				sharktank[sharkcounter].image.setScale(-2, 2);
+				sharktank[sharkcounter].speed = 7;
+
+
+			}
+			else
+			{
+				sharktank[sharkcounter].image.setPosition(2000, mc.image.getPosition().y - 100);
+				sharktank[sharkcounter].image.setScale(2, 2);
+				sharktank[sharkcounter].speed = -7;
+
+			}
+			sharkcounter++;
+			sharkspawntimer = 0;
+		}
+		if (sharkspawntimer <= 1000)
+			sharkspawntimer++;
+		if (sharkcounter > 19)
+		{
+			sharkcounter = 0;
+		}
+
+		if (signtimer.getElapsedTime().asSeconds() > 0.5 && signtimer.getElapsedTime().asSeconds() < 5 && pause == false)
+		{
+			if (sharkcounter % 2 == 0)
+			{
+				sign.setPosition(view.getCenter().x - 750, mc.image.getPosition().y);
+			}
+			else
+			{
+				sign.setPosition(view.getCenter().x + 640, mc.image.getPosition().y);
+			}
+			signtimer.restart();
+		}
+		if (starbubble_timer > 500) {
+			starfish[starbubble_counter].alive = true;
+			starfish[starbubble_counter].image.setTexture(tex12);
+			starfish[starbubble_counter].image.setPosition(rand() % 1920, 1080);
+			starfish[starbubble_counter].speed = -2;
+			starfish[starbubble_counter].image.setScale(1.7, 1.7);
+			starbubble_counter++;
+			starbubble_timer = 0;
+		}
+		if (starbubble_timer <= 500)
+			starbubble_timer++;
+
+		win.clear();
+		win.setView(view);
+		win.draw(back);
+		for (int i = 0; i < 100; i++)
+		{
+			win.draw(bubbles[i].image);
+		}
+		win.draw(mountain);
+		win.draw(shell);
+		if (drawpearl)
+			win.draw(pearl);
+		if (mc.dead == false)
+			win.draw(mc.image);
+		for (int i = 0; i < 100; i++)
+		{
+			win.draw(bubbles[i].image);
+		}
+		for (int i = 0; i < npc1; i += 1)
+		{
+			if (smallfish[i].alive && lose == false && minirespawn)
+				win.draw(smallfish[i].image);
+		}
+		for (int i = 0; i < npc2; i += 1)
+		{
+			if (mediumfish[i].alive && lose == false && yellowrespawn)
+				win.draw(mediumfish[i].image);
+		}
+
+		for (int i = 0; i < npc3; i += 1)
+		{
+			if (largefish[i].alive && phase2 && lose == false && lionrespawn)
+				win.draw(largefish[i].image);
+		}
+		for (int i = 0; i < npc4; i++)
+		{
+			if (sharktank[i].alive && lose == false)
+				win.draw(sharktank[i].image);
+		}
+		for (int i = 0; i < npc2; i++)
+		{
+			if (starfish[i].alive && lose == false)
+				win.draw(starfish[i].image);
+		}
+
+		// Lose level // 
+
+		if (lose)
+		{
+			gameover(back, In_game_level);
+		}
+
+		// Pause function // 
+
+		if (pause)
+		{
+			int xcoor = worldpos.x, ycoor = worldpos.y;
+			pmenu.setScale(0.7, 0.7);
+			resume.setScale(0.7, 0.7);
+			bmenu.setScale(0.7, 0.7);
+			pmenu.setPosition(view.getCenter().x - ((672 / 2) - 62.5), view.getCenter().y - 400);
+			resume.setPosition(view.getCenter().x - ((672 / 2) - 155), view.getCenter().y - 100);
+			bmenu.setPosition(view.getCenter().x - ((672 / 2) - 155), view.getCenter().y + 30);
+			prect.setPosition(resume.getPosition().x + 20, resume.getPosition().y + 20);
+			prect2.setPosition(bmenu.getPosition().x + 20, bmenu.getPosition().y + 20);
+			if (xcoor >= prect.getPosition().x && xcoor <= (prect.getPosition().x + 250) && ycoor >= prect.getPosition().y && ycoor <= (prect.getPosition().y + 90))
+			{
+				resume.setTexture(resumelight);
+				if (resumebuttonhover == 0)
+				{
+					effects[9].play();
+					resumebuttonhover++;
+				}
+			}
+			else
+			{
+				resume.setTexture(resumedark);
+				resumebuttonhover = 0;
+			}
+			if (xcoor >= prect2.getPosition().x && xcoor <= (prect2.getPosition().x + 250) && ycoor >= prect2.getPosition().y && ycoor <= (prect2.getPosition().y + 90))
+			{
+				bmenu.setTexture(backmenulight);
+				if (quitbuttonhover == 0)
+				{
+					effects[9].play();
+					quitbuttonhover++;
+				}
+			}
+			else
+			{
+				bmenu.setTexture(backmenudark);
+				quitbuttonhover = 0;
+			}
+			if (xcoor >= prect.getPosition().x && xcoor <= (prect.getPosition().x + 250) && ycoor >= prect.getPosition().y && ycoor <= (prect.getPosition().y + 90) && Mouse::isButtonPressed(Mouse::Left))
+			{
+				pause = false;
+			}
+			if (xcoor >= prect2.getPosition().x && xcoor <= (prect2.getPosition().x + 250) && ycoor >= prect2.getPosition().y && ycoor <= (prect2.getPosition().y + 90) && Mouse::isButtonPressed(Mouse::Left))
+			{
+				main_menu();
+			}
+			win.draw(pmenu);
+			win.draw(resume);
+			win.draw(bmenu);
+		}
+		if (pause == false)
+		{
+			win.draw(rectangle);
+			win.draw(BarRectangle);
+			win.draw(BarProgress);
+			win.draw(MenuFish1);
+			win.draw(MenuFish2);
+			win.draw(MenuFish3);
+			win.draw(tringle1);
+			win.draw(tringle2);
+			win.draw(growth);
+			win.draw(menut);
+			win.draw(scoree);
+			win.draw(livess);
+			win.draw(rectascore);
+			win.draw(rectalives);
+			win.draw(scorecount);
+			win.draw(livescount);
+		}
+		if (shelltime.getElapsedTime().asSeconds() >= 0 && shelltime.getElapsedTime().asSeconds() < 4 && pause == false && winner == false)
+		{
+			shell.setTextureRect(IntRect(408, 0, 106, 106));
+			if (cnt == 0)
+			{
+				if (rand() % 7 == 2)
+
+				{
+					blackpearl = true;
+					pearl.setTextureRect(IntRect(0, 0, 50, 50));
+
+				}
+				else if (rand() % 7 == 3 || rand() % 7 == 1)
+				{
+					whitepearl = true;
+					pearl.setTextureRect(IntRect(0, 50, 50, 50));
+
+				}
+				else {
+
+					whitepearl = false;
+					blackpearl = false;
+					pearl.setTextureRect(IntRect(0, 0, 0, 0));
+				}
+
+				drawpearl = true;
+				cnt++;
+			}
+		}
+		if (shelltime.getElapsedTime().asSeconds() > 5 && shelltime.getElapsedTime().asSeconds() <= 8 && pause == false && winner == false)
+		{
+			shell.setTextureRect(IntRect(0, 0, 106, 106));
+			shellisopen = false;
+			drawpearl = false;
+		}
+		if (shelltime.getElapsedTime().asSeconds() > 8)
+		{
+			shelltime.restart();
+			cnt = 0;
+
+		}
+		if (mermaidfound)
+		{
+
+			if (mermaidsoundcounter == 0)
+			{
+				effects[13].play();
+				mermaidsoundcounter++;
+			}
+			for (int i = 0; i < 9; i++)
+			{
+				if (starbubbledraw[i])
+					win.draw(starbubble[i]);
+			}
+
+			win.draw(mermaid);
+		}
+		if (sharkspawntimer > 850 && winner == false)
+		{
+			win.draw(sign);
+		}
+		win.display();
+	}
+}
+void game_select() {
+
+	///////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////       INITIALIZATIONS       ///////////////////////
+   ///////////////////////////////////////////////////////////////////////////////
+
+// Sound effects for buttons and level side //
+
+	int levelonebuttonhover = 0;
+	int leveltwobuttonhover = 0;
+	int backbuttonhover = 0;
+	int leveltwosidehover = 0;
+	int levelonesidehover = 0;
+
+	effectsB[9].loadFromFile("./Sounds/mouseOver.mp3");
+	effects[9].setBuffer(effectsB[9]);
+	effectsB[11].loadFromFile("./Sounds/switchsound.mp3");
+	effects[11].setBuffer(effectsB[11]);
+	effects[11].setPitch(1.9);
+	if (checkbox[1])
+	{
+		effects[11].setVolume(60);
+	}
+
+
+	bool fadeIn = true, fadeIn2 = true;
+	float alpha = 0.0f;
+	float alpha2 = 0.0f;
+	Clock clock;
+	Color textcolor2 = Color(255, 255, 255, alpha2), textcolor1 = Color(255, 255, 255, alpha);
+
+	// View //
+
+	View v;
+	v.setSize(1920, 1080);
+	v.setCenter(960, 540);
+
+	// Loading textures //
+
+	Texture tex, tex2, tex3, tex4, tex5, tex6, tex7, tex8, tex9, tex10, tex11, tex12;
+	tex.loadFromFile("./Images/background mixed.png");
+	tex2.loadFromFile("./Images/background level1.png");
+	tex3.loadFromFile("./Images/background level2.png");
+	tex4.loadFromFile("./Images/playlogo-02.png");
+	tex5.loadFromFile("./Images/mini.png");
+	tex6.loadFromFile("./Images/yellow.png");
+	tex7.loadFromFile("./Images/lion.png");
+	tex8.loadFromFile("./Images/parrot.png");
+	tex9.loadFromFile("./Images/tun.png");
+	tex10.loadFromFile("./Images/john.png");
+	tex11.loadFromFile("./Images/Back button.png");
+	tex12.loadFromFile("./Images/danger sign.png");
+	tex12.setSmooth(true);
+
+	// Background sprites //
+
+	Sprite backgroundmix, backbutton;
+	backgroundmix.setPosition(0.f, 230.f);
+	backgroundmix.setScale(1, 1);
+	backgroundmix.setTexture(tex);
+	backbutton.setTexture(tex11);
+	backbutton.setPosition(1380, 125);
+
+	// Sprites for level one side //
+
+	Sprite  playbutton_level1, smallfish_level1, mediumfish_level1, largefish_level1;
+	playbutton_level1.setTexture(tex4);
+	playbutton_level1.setPosition(220.f, 580.f);
+	playbutton_level1.setScale(0.07, 0.07);
+	smallfish_level1.setTexture(tex5);
+	smallfish_level1.setPosition(1150, 800);
+	mediumfish_level1.setTexture(tex6);
+	mediumfish_level1.setPosition(1330, 790);
+	largefish_level1.setTexture(tex7);
+	largefish_level1.setPosition(1550, 750);
+
+	// Sprites for level two side //
+
+	Sprite  playbutton_level2, smallfish_level2, mediumfish_level2, largefish_level2, dangersign;
+	playbutton_level2.setTexture(tex4);
+	playbutton_level2.setPosition(1370.f, 580.f);
+	playbutton_level2.setScale(0.07, 0.07);
+	smallfish_level2.setTexture(tex8);
+	smallfish_level2.setPosition(220, 800);
+	mediumfish_level2.setTexture(tex9);
+	mediumfish_level2.setPosition(400, 800);
+	largefish_level2.setTexture(tex10);
+	largefish_level2.setPosition(600, 750);
+	dangersign.setTexture(tex12);
+	dangersign.setTextureRect(IntRect(0, 0, 160, 160));
+	dangersign.setPosition(700, 530);
+	dangersign.setScale(0.7, 0.7);
+
+	// Loading font //
+
+	Font generalfont;
+	generalfont.loadFromFile("./Fonts/GothamKnightsMid-51v0G.otf");
+
+	// Background text //
+
+	Text information, levelselect, backtext;
+	information.setCharacterSize(140);
+	information.setFont(generalfont);
+	information.setString("known species");
+	levelselect.setCharacterSize(200);
+	levelselect.setFont(generalfont);
+	levelselect.setPosition(20.f, 10.f);
+	levelselect.setString("level select");
+	backtext.setFont(generalfont);
+	backtext.setFillColor(Color::White);
+	backtext.setString("back");
+	backtext.setCharacterSize(120);
+	backtext.setPosition(Vector2f(1450, 70));
+
+	// Text for level one side //
+
+	Text level1text, level1place, level1description;
+	level1text.setCharacterSize(140);
+	level1text.setFont(generalfont);
+	level1text.setPosition(200.f, 450.f);
+	level1text.setString("level 1");
+	level1place.setCharacterSize(140);
+	level1place.setFont(generalfont);
+	level1place.setPosition(1150.f, 350.f);
+	level1place.setString("sunny water");
+	level1description.setCharacterSize(60);
+	level1description.setFont(generalfont);
+	level1description.setPosition(1150.f, 500.f);
+	level1description.setString("the beginning a slowpaced water \nwith few risks ahead!");
+
+	// Text for level two side //
+
+	Text level2text, level2place, level2description;
+	level2text.setCharacterSize(140);
+	level2text.setFont(generalfont);
+	level2text.setPosition(1350.f, 450.f);
+	level2text.setString("level 2");
+	level2place.setCharacterSize(140);
+	level2place.setFont(generalfont);
+	level2place.setPosition(200.f, 350.f);
+	level2place.setString("dark coral reef");
+	level2description.setCharacterSize(60);
+	level2description.setFont(generalfont);
+	level2description.setPosition(200.f, 500.f);
+	level2description.setString("more depth means more risks \nbe aware of the shark attacks");
+
+	// Setting cursor visibility //
+
+	win.setMouseCursorVisible(true);
+
+	// Resetting npc fish positions //
+
+	npcrestart();
+
+	//////////////////////////////////////////////////////////////////////
+   ////////////////////       GAME LOOP        //////////////////////////
+  //////////////////////////////////////////////////////////////////////
+
+
+	while (win.isOpen())
+	{
+		while (win.pollEvent(ev))
+		{
+			if (ev.type == Event::Closed)
+				win.close();
+		}
+		///////////////////////////////////////////////////////////////////////
+	   ////////////////////       CONDITIONS        //////////////////////////
+	  ///////////////////////////////////////////////////////////////////////
+		float deltaTime = clock.restart().asSeconds(); //calc deltatime
+
+
+		// changing "back" text color when the mouse is in it's position //
+
+		if (Mouse::getPosition().x > 1450 && Mouse::getPosition().x < 1630 && Mouse::getPosition().y > 140 && Mouse::getPosition().y < 230)
+		{
+			backtext.setFillColor(Color::Cyan);
+			backbutton.setScale(1.1, 1.1);
+			if (backbuttonhover == 0)
+			{
+				effects[9].play();
+				backbuttonhover++;
+			}
+		}
+		else
+		{
+			backbutton.setScale(1, 1);
+			backbuttonhover = 0;
+			backtext.setFillColor(Color::White);
+		}
+
+		// Going Back to main menu when cliking on the back button //
+
+
+		if (Mouse::getPosition().x > 1450 && Mouse::getPosition().x < 1600 && Mouse::getPosition().y > 120 && Mouse::getPosition().y < 240 && Mouse::isButtonPressed(Mouse::Left))
+
+		{
+			main_menu();
+		}
+
+		// Going to level two when clicking on level two button //
+
+
+		if (Mouse::getPosition().x > playbutton_level2.getGlobalBounds().left && Mouse::getPosition().x < playbutton_level2.getGlobalBounds().left + playbutton_level2.getGlobalBounds().width && Mouse::getPosition().y > playbutton_level2.getGlobalBounds().top && Mouse::getPosition().y < playbutton_level2.getGlobalBounds().top + playbutton_level2.getGlobalBounds().height && Mouse::isButtonPressed(Mouse::Left))
+		{
+			level2();
+		}
+
+		if (Mouse::getPosition().x > playbutton_level2.getGlobalBounds().left && Mouse::getPosition().x < playbutton_level2.getGlobalBounds().left + playbutton_level2.getGlobalBounds().width && Mouse::getPosition().y > playbutton_level2.getGlobalBounds().top && Mouse::getPosition().y < playbutton_level2.getGlobalBounds().top + playbutton_level2.getGlobalBounds().height)
+		{
+			playbutton_level2.setScale(0.09, 0.09);
+			if (leveltwobuttonhover == 0)
+			{
+				effects[9].play();
+				leveltwobuttonhover++;
+			}
+		}
+		else
+		{
+			leveltwobuttonhover = 0;
+			playbutton_level2.setScale(0.07, 0.07);
+		}
+
+		// Going to level one when clicking on level one button //
+
+
+		if (Mouse::getPosition().x > playbutton_level1.getGlobalBounds().left && Mouse::getPosition().x < playbutton_level1.getGlobalBounds().left + playbutton_level1.getGlobalBounds().width && Mouse::getPosition().y > playbutton_level1.getGlobalBounds().top && Mouse::getPosition().y < playbutton_level1.getGlobalBounds().top + playbutton_level1.getGlobalBounds().height && Mouse::isButtonPressed(Mouse::Left))
+		{
+			level1();
+		}
+		win.clear(Color(13, 11, 58));
+
+		if (Mouse::getPosition().x > playbutton_level1.getGlobalBounds().left && Mouse::getPosition().x < playbutton_level1.getGlobalBounds().left + playbutton_level1.getGlobalBounds().width && Mouse::getPosition().y > playbutton_level1.getGlobalBounds().top && Mouse::getPosition().y < playbutton_level1.getGlobalBounds().top + playbutton_level1.getGlobalBounds().height)
+		{
+			playbutton_level1.setScale(0.09, 0.09);
+			if (levelonebuttonhover == 0)
+			{
+				effects[9].play();
+				levelonebuttonhover++;
+			}
+		}
+		else
+		{
+			levelonebuttonhover = 0;
+			playbutton_level1.setScale(0.07, 0.07);
+		}
+		// Drawing background sprites //
+
+
+		win.draw(backgroundmix);
+		win.draw(levelselect);
+		win.draw(backtext);
+		win.draw(backbutton);
+
+
+		// Drawing the sprites of level two when the mouse is in the right side of the screen //
+
+
+		if (Mouse::getPosition().x > 960 && Mouse::getPosition().y > 300)
+		{
+			levelonesidehover = 0;
+			if (leveltwosidehover == 0)
+			{
+				effects[11].play();
+				leveltwosidehover++;
+			}
+
+			// new fading /////////////////
+			alpha = 0;
+			fadeIn2 = true;
+			if (fadeIn)
+			{
+				alpha2 += deltaTime * 100; // Increase alpha for fade-in effect
+				if (alpha2 >= 255.0f)
+				{
+					alpha2 = 255.0f;
+					fadeIn = false;
+				}
+			}
+			textcolor2 = Color(255, 255, 255, alpha2);
+
+			information.setFillColor(textcolor2);
+			largefish_level2.setColor(textcolor2);
+			mediumfish_level2.setColor(textcolor2);
+			smallfish_level2.setColor(textcolor2);
+			level2description.setFillColor(textcolor2);
+			level2place.setFillColor(textcolor2);
+			dangersign.setColor(textcolor2);
+
+			win.draw(level2place);
+			win.draw(level2text);
+			win.draw(playbutton_level2);
+			win.draw(level2description);
+			backgroundmix.setTexture(tex3);
+			information.setPosition(200.f, 600.f);
+			win.draw(smallfish_level2);
+			win.draw(mediumfish_level2);
+			win.draw(largefish_level2);
+			win.draw(information);
+			win.draw(dangersign);
+		}
+
+
+
+
+		// Drawing the sprites of level one when the mouse is in the left side of the screen //
+
+
+		else if (Mouse::getPosition().x < 960 && Mouse::getPosition().y > 300)
+		{
+			leveltwosidehover = 0;
+			alpha2 = 0;
+			fadeIn = true;
+			if (levelonesidehover == 0)
+			{
+				effects[11].play();
+				levelonesidehover++;
+			}
+			if (fadeIn2)
+			{
+				alpha += deltaTime * 100; // Increase alpha for fade-in effect
+				if (alpha >= 255.0f)
+				{
+					alpha = 255.0f;
+					fadeIn2 = false;
+				}
+			}
+			textcolor1 = Color(255, 255, 255, alpha);
+			information.setFillColor(textcolor1);
+			largefish_level1.setColor(textcolor1);
+			mediumfish_level1.setColor(textcolor1);
+			smallfish_level1.setColor(textcolor1);
+			level1description.setFillColor(textcolor1);
+			level1place.setFillColor(textcolor1);
+			win.draw(level1place);
+			win.draw(level1text);
+			win.draw(playbutton_level1);
+			win.draw(level1description);
+			information.setPosition(1150.f, 600.f);
+			win.draw(information);
+			win.draw(smallfish_level1);
+			win.draw(mediumfish_level1);
+			win.draw(largefish_level1);
+			backgroundmix.setTexture(tex2);
+
+		}
+
+
+		// Drawing background sprites //
+
+
+		else
+		{
+			leveltwosidehover = 0;
+			levelonesidehover = 0;
+			alpha = 0;
+			alpha2 = 0;
+			fadeIn = true;
+			fadeIn2 = true;
+			backgroundmix.setTexture(tex);
+			win.draw(level2text);
+			win.draw(playbutton_level2);
+			win.draw(level1text);
+			win.draw(playbutton_level1);
+
+		}
+		win.setView(v);
+		win.display();
+	}
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+}
+void intro()
+{
+
+	mainmusic.loadFromFile("./Music/introsound.mp3");
+	mainnmusic.setBuffer(mainmusic);
+	mainnmusic.play();
+	win.setMouseCursorVisible(false);
+	win.setFramerateLimit(60);
+	Sprite workshop;
+	Texture workshoplogo;
+
+	workshoplogo.loadFromFile("./Images/Workshop studio-02.png");
+	workshop.setTexture(workshoplogo);
+
+	FloatRect logoRect = workshop.getLocalBounds();
+
+	workshop.setPosition(Vector2f(519, 295));
+
+	// Main loop
+	bool fadeIn = true;
+	bool fadeOut = false;
+	float alpha = 0.0f;
+	Clock clock, duration;
+	duration.restart();
+	while (win.isOpen())
+	{
+		while (win.pollEvent(ev))
+		{
+			if (ev.type == Event::Closed)
+				win.close();
+		}
+
+		// Calculate delta time
+		float deltaTime = clock.restart().asSeconds();
+
+		// Update alpha value for fading effect
+		if (fadeIn)
+		{
+			alpha += deltaTime * 100; // Increase alpha for fade-in effect
+			if (alpha >= 255.0f)
+			{
+				alpha = 255.0f;
+				fadeIn = false;
+				fadeOut = true;
+			}
+		}
+		else if (fadeOut)
+		{
+			alpha -= deltaTime * 100; // Decrease alpha for fade-out effect
+			if (alpha <= 0.0f)
+			{
+				alpha = 0.0f;
+				fadeOut = false;
+			}
+		}
+
+		// Update text color with alpha value
+		Color logocolor = Color(255, 255, 255, alpha);
+		workshop.setColor(logocolor);
+		if (duration.getElapsedTime().asSeconds() > 6 || Mouse::isButtonPressed(Mouse::Left))
+		{
+			main_menu();
+		}
+		// Clear the window
+		win.clear(sf::Color::Black);
+
+		// Draw the text
+		win.draw(workshop);
+
+		// Display everything on the screen
+		win.display();
+	}
+}
+void credits()
+{
+	///////////////////////////////////////////////////////////////////////////////
+   ///////////////////////////       INITIALIZATIONS       ///////////////////////
+  ///////////////////////////////////////////////////////////////////////////////
+
+// Music //
+
+	mainmusic.loadFromFile("./Music/creditssong.mp3");
+	mainnmusic.play();
+
+	// Limit the frame rate to 60 FPS //
+
+	win.setFramerateLimit(60);
+
+	// Booleans and variables //
+
+	bool fadeIn = true;
+	bool fadeOut = false;
+	float opacityfactor = 0.0f;
+
+	// Loading textures //
+
+	Texture tex;
+	tex.loadFromFile("./Images/credits.png");
+
+	// Sprites //
+
+	Sprite workshoplogo;
+	workshoplogo.setTexture(tex);
+
+	// Timers //
+
+	Clock clock, duration;
+	duration.restart();
+
+	// Setting cursor visibility //
+
+	win.setMouseCursorVisible(false);
+
+
+	//////////////////////////////////////////////////////////////////////
+   ////////////////////       GAME LOOP        //////////////////////////
+  //////////////////////////////////////////////////////////////////////
+
+
+	while (win.isOpen())
+	{
+
+		while (win.pollEvent(ev))
+		{
+			if (ev.type == sf::Event::Closed)
+				win.close();
+		}
+
+		// Calculate deltatime //
+
+		float deltaTime = clock.restart().asSeconds();
+
+		///////////////////////////////////////////////////////////////////////
+	   ////////////////////       CONDITIONS        //////////////////////////
+	  ///////////////////////////////////////////////////////////////////////
+
+
+
+// Update opacity factor value for fading in effect //
+
+
+		if (fadeIn)
+		{
+			opacityfactor += deltaTime * 90;
+
+
+			// Ending fading in when the sprite is fully drawn //
+
+			if (opacityfactor >= 255.0f)
+			{
+				opacityfactor = 255.0f;
+				fadeIn = false;
+				fadeOut = true;
+			}
+		}
+
+		// Update opacity factor value for fading out effect //
+
+		else if (fadeOut)
+		{
+			opacityfactor -= deltaTime * 20;
+			// Ending fading out when the sprite is almost transparent //
+
+
+			if (opacityfactor <= 0.0f)
+			{
+				opacityfactor = 0.0f;
+				fadeOut = false;
+			}
+		}
+
+		// Update text color with opacity factor value //
+
+		Color pictureopacity = Color(255, 255, 255, opacityfactor);
+		workshoplogo.setColor(pictureopacity);
+
+		// Ending credits after 20 seconds and going back to main menu //
+
+		if (duration.getElapsedTime().asSeconds() > 20 || Keyboard::isKeyPressed(Keyboard::Escape))
+		{
+			main_menu();
+		}
+
+		win.clear(Color::Black);
+		win.draw(workshoplogo);
+		win.display();
+	}
+}
+void yourname()
+{
+	Texture tex;
+	tex.loadFromFile("./Images/yournamebackground.png");
+	Sprite background;
+	background.setTexture(tex);
+	string input;
+	Font font;
+	font.loadFromFile("./Fonts/GothamKnightsMid-51v0G.otf");
+	//declaring the name characteristics 
+	Text  name;
+	name.setFont(font);
+	name.setPosition(580, 525);
+	name.setCharacterSize(130);
+	name.setFillColor(Color::Black);
+	while (win.isOpen())
+	{
+		while (win.pollEvent(ev))
+		{
+			if (ev.type == Event::Closed)
+			{
+				win.close();
+			}
+			if (ev.type == Event::TextEntered)
+			{
+				input += static_cast<char>(ev.text.unicode);
+			}
+			if (Keyboard::isKeyPressed(Keyboard::Backspace) && input.size() > 0)
+			{
+				input.resize(input.size() - 1);
+			}
+			if (input.size() > 20)
+			{
+				input.resize(input.size() - 1);
+			}
+			if (Keyboard::isKeyPressed(Keyboard::Enter) && input.size() > 2)
+			{
+				ofstream offile;
+				offile.open("savingscores.txt", ios::app);
+				offile << input << "        ";
+
+				if (In_game_level) {
+					offile << scorelevel1 << "     score level 1" << '*' << endl;
+					game_select();
+				}
+				else {
+					offile << scorelevel2 << "     score level 2" << '*' << endl;
+					credits();
+				}
+			}
+		}
+		name.setString(input);
+		win.clear();
+		win.draw(background);
+		win.draw(name);
+		win.display();
+	}
+}
+void leaderboard()
+{
+	effectsB[9].loadFromFile("./Sounds/mouseOver.mp3");
+	effects[9].setBuffer(effectsB[9]);
+	int quitbuttonhover = 0;
+	Texture tex, tex2, tex3, tex4;
+	tex.loadFromFile("./Images/background.png");
+	tex2.loadFromFile("./Images/leaderboard.png");
+	tex3.loadFromFile("./Images/QUIT dark.png");
+	tex4.loadFromFile("./Images/QUIT light.png");
+
+	// sprite for the leaderboard
+
+	Sprite background, leaderboardframe, quitbutton;
+	background.setTexture(tex);
+	leaderboardframe.setTexture(tex2);
+	leaderboardframe.setScale(0.9, 0.9);
+	leaderboardframe.setPosition(200, 0);
+	quitbutton.setTexture(tex3);
+	quitbutton.setPosition(300, 650);
+	Font font;
+	font.loadFromFile("./Fonts/GothamKnightsMid-51v0G.otf");
+	Text text[10];
+
+	for (int i = 0; i < 10; i++)
+	{
+		text[i].setFont(font);
+		text[i].setCharacterSize(60);
+		text[i].setFillColor(Color::White);
+	}
+
+	Vector2f size = { 355, 140 };
+	RectangleShape quitbuttonrectangle(size);
+	quitbuttonrectangle.setPosition(325, 670);
+	ifstream infile;
+	infile.open("savingscores.txt", ios::in);
+	vector <string> lines;
+	string line;
+	while (getline(infile, line, '*'))
+	{
+		lines.push_back(line);
+	}
+	for (int i = 0; i < lines.size(); i++)
+	{
+		text[i].setString(lines[i]);
+		if (i != 0)
+		{
+			text[i].setPosition(400, text[i - 1].getPosition().y + 100);
+			text[0].setPosition(400, 100);
+		}
+	}
+	while (win.isOpen())
+	{
+		int xcoordinates = Mouse::getPosition().x, ycoordinates = Mouse::getPosition().y;
+		while (win.pollEvent(ev))
+		{
+			if (ev.type == Event::Closed)
+			{
+				win.close();
+			}
+		}
+		if (xcoordinates >= quitbuttonrectangle.getPosition().x && xcoordinates <= (quitbuttonrectangle.getPosition().x + 355) && ycoordinates >= quitbuttonrectangle.getPosition().y && ycoordinates <= (quitbuttonrectangle.getPosition().y + 140))
+		{
+			quitbutton.setTexture(tex4);
+			if (quitbuttonhover == 0)
+			{
+				effects[9].play();
+				quitbuttonhover++;
+			}
+		}
+		else
+		{
+			quitbutton.setTexture(tex3);
+			quitbuttonhover = 0;
+		}
+		if (xcoordinates >= quitbuttonrectangle.getPosition().x && xcoordinates <= (quitbuttonrectangle.getPosition().x + 355) && ycoordinates >= quitbuttonrectangle.getPosition().y && ycoordinates <= (quitbuttonrectangle.getPosition().y + 140) && Mouse::isButtonPressed(Mouse::Left))
+		{
+			main_menu();
+		}
+		win.clear();
+		win.draw(background);
+		win.draw(leaderboardframe);
+		win.draw(quitbutton);
+		for (int i = 0; i < 6; i++)
+		{
+			win.draw(text[i]);
+		}
+		win.display();
+	}
+}
